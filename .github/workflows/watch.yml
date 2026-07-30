@@ -74,7 +74,10 @@ jobs:
         id: pr
         if: steps.sync.outputs.changed == 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
+          # An org that disables "Allow GitHub Actions to create and approve
+          # pull requests" blocks github.token from opening one. A PAT secret,
+          # if present, is used instead; otherwise fix the org toggle.
+          GH_TOKEN: ${{ secrets.GH_PAT || github.token }}
           HEADLINE: ${{ steps.sync.outputs.headline }}
           SEVERITY: ${{ steps.sync.outputs.severity }}
           DIGEST: ${{ steps.sync.outputs.bundle_sha256 }}
@@ -109,7 +112,7 @@ jobs:
       - name: close superseded pull requests
         if: steps.pr.outputs.url != ''
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.GH_PAT || github.token }}
           KEEP: ${{ steps.pr.outputs.branch }}
           URL: ${{ steps.pr.outputs.url }}
         run: |
@@ -127,7 +130,7 @@ jobs:
       - name: auto-merge routine changes
         if: steps.pr.outputs.url != '' && steps.sync.outputs.severity == 'routine'
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.GH_PAT || github.token }}
           URL: ${{ steps.pr.outputs.url }}
         run: |
           gh pr merge "$URL" --squash --delete-branch --auto \
