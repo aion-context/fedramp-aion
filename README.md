@@ -143,7 +143,7 @@ for required checks instead of merging immediately.
 ## Tests
 
 ```sh
-cargo test          # 51 tests, no network
+cargo test          # 56 tests, no network
 cargo clippy --all-targets
 ```
 
