@@ -99,25 +99,26 @@ reproduces all seven of FedRAMP's own commits for that day.
 ## Running as an action
 
 `.github/workflows/watch.yml` runs daily at 07:30 UTC (an hour after upstream's
-06:27 rewrite) and on manual dispatch. `routine` changes — counters ticking,
+06:27 rewrite) and on any push to `main`. `routine` changes — counters ticking,
 mapping rows — are auto-merged. Everything louder waits for a reviewer.
 
-One-time bootstrap:
+**Nothing needs starting by hand.** The genesis chain is written by the first
+run that finds no `fedramp.aion`, so pushing the repo is enough to bootstrap it.
+Runs triggered by the bot's own auto-merge are skipped, so the loop terminates.
+
+The one unavoidable human act is placing the signing key, because the point of
+the artifact is that a person controls the identity behind the signature:
 
 ```sh
-# 1. create the signing identity and reveal the seed once
+# once: create the identity, reveal the seed, pin the public half
 cargo run --release -- keygen --key 1 --author 1 \
   --keystore .keys --registry registry.json --print-secret
-
-# 2. commit registry.json — it holds only public keys
 git add registry.json && git commit -m 'pin the signing identity'
-
-# 3. store the printed seed as the AION_SIGNING_KEY repository secret
-gh secret set AION_SIGNING_KEY
-
-# 4. run once manually to write the genesis chain
-gh workflow run watch.yml
+gh secret set AION_SIGNING_KEY   # paste the printed seed
 ```
+
+`registry.json` carries only public keys. Without the secret, the sync step
+fails rather than producing an unsigned artifact.
 
 The seed is used because the file keystore encrypts key material with a
 machine-derived key: a key file copied to a runner cannot be decrypted there.

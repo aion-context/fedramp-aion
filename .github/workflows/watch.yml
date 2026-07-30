@@ -1,9 +1,13 @@
 name: watch
 
 # Upstream rewrites the marketplace file daily at 06:27 UTC; run after it lands.
+# The push trigger means the chain bootstraps itself: the first run after any
+# push to main writes genesis, with no one having to start it by hand.
 on:
   schedule:
     - cron: '30 7 * * *'
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       force:
@@ -26,6 +30,9 @@ env:
 jobs:
   watch:
     runs-on: ubuntu-latest
+    # A push by the bot is the tail end of this workflow's own auto-merge.
+    # Re-running then would only re-confirm that nothing moved.
+    if: github.event_name != 'push' || github.actor != 'github-actions[bot]'
     steps:
       - uses: actions/checkout@v4
 
