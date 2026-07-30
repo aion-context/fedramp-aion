@@ -37,8 +37,7 @@ fedramp-aion keygen --key 1 --author 1 --keystore .keys --registry registry.json
 fedramp-aion plan
 
 # fetch, diff, sign a new chain version, verify it
-fedramp-aion sync --author 1 --key 1 --keystore .keys \
-  --report out/CHANGES.md --outputs "$GITHUB_OUTPUT"
+fedramp-aion sync --author 1 --key 1 --keystore .keys --report out/CHANGES.md
 
 # independently check the chain and that data/ matches what was signed
 fedramp-aion verify
