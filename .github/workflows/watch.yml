@@ -23,9 +23,12 @@ concurrency:
   group: fedramp-watch
   cancel-in-progress: false
 
+# Repository variables, so the identity can be re-pointed without editing this
+# file. The seed itself is a secret, never a variable: variables are plaintext
+# and are not masked in logs.
 env:
-  AION_AUTHOR: '1'
-  AION_KEY: '1'
+  AION_AUTHOR: ${{ vars.AION_AUTHOR || '1' }}
+  AION_KEY: ${{ vars.AION_KEY || '1' }}
 
 jobs:
   watch:
