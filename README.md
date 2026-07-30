@@ -1,5 +1,7 @@
 # fedramp-aion
 
+[![Tip my tokens](https://tokentip.to/badge/copyleftdev.svg?logo=1)](https://tokentip.to/@copyleftdev)
+
 Watches FedRAMP's authoritative machine-readable sources, detects real change,
 and emits a cryptographically signed [`.aion`](https://crates.io/crates/aion-context)
 chain as the deliverable.
