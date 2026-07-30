@@ -39,8 +39,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      # Only GitHub-owned actions are permitted in this org, so the toolchain
+      # comes from the runner's preinstalled rustup and caching uses
+      # actions/cache rather than third-party equivalents.
+      - name: rust toolchain
+        run: |
+          rustup toolchain install stable --profile minimal --no-self-update
+          rustup default stable
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: cargo-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
 
       - run: cargo build --release --locked
 
