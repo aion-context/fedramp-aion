@@ -1,8 +1,15 @@
 name: probe
 on:
   workflow_dispatch:
+    inputs:
+      force:
+        description: Sign a chain version even when nothing moved
+        type: boolean
+        default: false
 jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - run: echo ok
+      - env:
+          FORCE: ${{ inputs.force && '--force' || '' }}
+        run: echo "force=[$FORCE]"
