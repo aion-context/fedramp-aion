@@ -1,0 +1,6 @@
+/target
+/out
+/snapshots
+# signing key material never belongs in the repo — only registry.json does
+/.keys
+*.key

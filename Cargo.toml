@@ -1,0 +1,25 @@
+[package]
+name = "fedramp-aion"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.82"
+description = "Detect change in FedRAMP's machine-readable sources and emit a signed .aion chain"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+aion-context = "1.0"
+anyhow = "1"
+clap = { version = "4", features = ["derive", "env"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+time = { version = "0.3", features = ["parsing", "formatting"] }
+ureq = { version = "2", features = ["tls", "json"] }
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+module_name_repetitions = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+must_use_candidate = "allow"
+doc_markdown = "allow"

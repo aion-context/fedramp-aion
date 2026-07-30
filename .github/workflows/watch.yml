@@ -1,0 +1,124 @@
+name: watch
+
+# Upstream rewrites the marketplace file daily at 06:27 UTC; run after it lands.
+on:
+  schedule:
+    - cron: '30 7 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Sign a chain version even when nothing moved
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: fedramp-watch
+  cancel-in-progress: false
+
+env:
+  AION_AUTHOR: '1'
+  AION_KEY: '1'
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - run: cargo build --release --locked
+
+      # Fetches pinned upstream commits, diffs against the chain, and signs a
+      # new version only if something actually moved. The chain is verified
+      # before this step succeeds.
+      - name: sync
+        id: sync
+        env:
+          AION_SIGNING_KEY: ${{ secrets.AION_SIGNING_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
+          FORCE: ${{ inputs.force && '--force' || '' }}
+        run: |
+          ./target/release/fedramp-aion sync \
+            --author "$AION_AUTHOR" \
+            --key "$AION_KEY" \
+            --report out/CHANGES.md \
+            --outputs "$GITHUB_OUTPUT" \
+            $FORCE
+
+      - name: verify the signed chain independently
+        if: steps.sync.outputs.changed == 'true'
+        run: ./target/release/fedramp-aion verify
+
+      - name: job summary
+        run: cat out/CHANGES.md >> "$GITHUB_STEP_SUMMARY"
+
+      # Branch name is the bundle digest: hex, unique per upstream state, and
+      # never carries upstream text into a shell.
+      - name: open pull request
+        id: pr
+        if: steps.sync.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEADLINE: ${{ steps.sync.outputs.headline }}
+          SEVERITY: ${{ steps.sync.outputs.severity }}
+          DIGEST: ${{ steps.sync.outputs.bundle_sha256 }}
+        run: |
+          set -euo pipefail
+          branch="fedramp-sync/${DIGEST:0:12}"
+
+          git config user.name  'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch -c "$branch"
+          git add fedramp.aion data
+          # Upstream text reaches git only through a quoted variable, never
+          # through shell interpolation.
+          printf '%s\n' "$HEADLINE" | git commit --file -
+          git push --force origin "$branch"
+
+          gh label create "$SEVERITY" --force --color ededed >/dev/null 2>&1 || true
+          url=$(gh pr list --head "$branch" --state open --json url --jq '.[0].url // empty')
+          if [ -z "$url" ]; then
+            url=$(gh pr create \
+              --title "$HEADLINE" \
+              --body-file out/CHANGES.md \
+              --label "$SEVERITY" \
+              --head "$branch" \
+              --base "${GITHUB_REF_NAME}")
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+
+      # Each PR is a full snapshot against main, not a delta, so an older open
+      # one is strictly contained in this one.
+      - name: close superseded pull requests
+        if: steps.pr.outputs.url != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          KEEP: ${{ steps.pr.outputs.branch }}
+          URL: ${{ steps.pr.outputs.url }}
+        run: |
+          set -euo pipefail
+          gh pr list --state open --json number,headRefName \
+            --jq '.[] | select(.headRefName | startswith("fedramp-sync/")) | "\(.number) \(.headRefName)"' \
+          | while read -r number head; do
+              [ "$head" = "$KEEP" ] && continue
+              gh pr close "$number" --delete-branch \
+                --comment "Superseded by $URL, which contains this change plus later upstream movement."
+            done
+
+      # Counter movement and mapping rows are real but not worth a reviewer's
+      # attention. Everything louder waits for a human.
+      - name: auto-merge routine changes
+        if: steps.pr.outputs.url != '' && steps.sync.outputs.severity == 'routine'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          URL: ${{ steps.pr.outputs.url }}
+        run: |
+          gh pr merge "$URL" --squash --delete-branch --auto \
+            || gh pr merge "$URL" --squash --delete-branch
