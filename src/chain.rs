@@ -64,6 +64,39 @@ impl Signer {
 
 /// Create a signing key and the registry that pins it, both file-backed.
 /// This is how the action bootstraps its identity without an OS keyring.
+/// Reveal an existing key's seed for a CI secret, refusing if it is not the
+/// key the committed registry pins. Regenerating instead would orphan the
+/// registry and break the chain's continuity.
+pub fn reveal_secret(
+    key: u64,
+    author: u64,
+    keystore_dir: Option<std::path::PathBuf>,
+    registry_path: &Path,
+) -> Result<String> {
+    let signer = Signer {
+        author,
+        key,
+        keystore_dir,
+        secret_hex: None,
+    };
+    let signing = signer.load()?;
+    let public = signing.verifying_key().to_bytes();
+
+    let registry = load_registry(registry_path)?;
+    let author_id = AuthorId::new(author);
+    let pinned = registry
+        .epochs_for(author_id)
+        .iter()
+        .any(|epoch| epoch.public_key == public);
+    anyhow::ensure!(
+        pinned,
+        "key {key} does not match any epoch pinned for author {author} in {} — \
+         signing with it would produce a chain that fails verification",
+        registry_path.display()
+    );
+    Ok(crate::canon::hex(signing.to_bytes()))
+}
+
 /// Returns the hex-encoded seed, which is what a CI secret must hold.
 pub fn keygen(
     key: u64,

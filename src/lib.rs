@@ -157,6 +157,20 @@ pub fn run_keygen(args: &KeygenArgs) -> Result<i32> {
     Ok(0)
 }
 
+/// Only the seed goes to stdout, so the output can be piped straight into
+/// `gh secret set` without a human reading it off the screen.
+pub fn run_secret(args: &cli::SecretArgs) -> Result<i32> {
+    let secret =
+        chain::reveal_secret(args.key, args.author, args.keystore.clone(), &args.registry)?;
+    eprintln!(
+        "key {} verified against {} — the seed below is on stdout only",
+        args.key,
+        args.registry.display()
+    );
+    println!("{secret}");
+    Ok(0)
+}
+
 pub fn run_capture(args: &CaptureArgs) -> Result<i32> {
     std::fs::create_dir_all(&args.out)?;
     let fetcher = fetcher(&args.sources);

@@ -114,11 +114,25 @@ the artifact is that a person controls the identity behind the signature:
 cargo run --release -- keygen --key 1 --author 1 \
   --keystore .keys --registry registry.json --print-secret
 git add registry.json && git commit -m 'pin the signing identity'
-gh secret set AION_SIGNING_KEY   # paste the printed seed
 ```
+
+Then load the secret. `secret` prints the seed on **stdout only** — everything
+else goes to stderr — so it pipes without ever being displayed:
+
+```sh
+cargo run --release -- secret | gh secret set AION_SIGNING_KEY
+```
+
+It refuses to print a key the committed `registry.json` does not pin, which is
+the mistake that would otherwise produce a chain that fails verification. Use it
+whenever the secret needs restoring — as long as `.keys/` survives, the identity
+is recoverable and `keygen` should not be re-run.
 
 `registry.json` carries only public keys. Without the secret, the sync step
 fails rather than producing an unsigned artifact.
+
+> The file keystore encrypts to the machine that created it, so `.keys/` is
+> local to one box. Back up the seed itself, not the key file.
 
 The seed is used because the file keystore encrypts key material with a
 machine-derived key: a key file copied to a runner cannot be decrypted there.

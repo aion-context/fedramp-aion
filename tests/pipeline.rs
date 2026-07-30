@@ -336,6 +336,53 @@ fn fail_on_threshold_signals_without_blocking_the_commit() {
     assert_eq!(workspace.chain_version(), 3);
 }
 
+#[test]
+fn revealed_secret_matches_the_pinned_registry_and_signs() {
+    let workspace = Workspace::new("reveal");
+    let revealed = chain::reveal_secret(
+        42,
+        42,
+        Some(workspace.path("keys")),
+        &workspace.path("registry.json"),
+    )
+    .unwrap();
+    assert_eq!(revealed, workspace.secret);
+
+    workspace.publish(
+        &rules("2026.07.14.01", "SHOULD"),
+        &schemas(),
+        &marketplace("2026-07-23T06:27:00Z", 313, "Authorized"),
+    );
+    let mut args = workspace.sync();
+    args.keystore = None;
+    args.signing_key = Some(revealed);
+    fedramp_aion::run_sync(&args).unwrap();
+    workspace.verify().unwrap();
+}
+
+#[test]
+fn revealing_a_key_the_registry_does_not_pin_is_refused() {
+    let workspace = Workspace::new("reveal-mismatch");
+    chain::keygen(
+        99,
+        99,
+        Some(&workspace.path("keys")),
+        &workspace.path("other-registry.json"),
+    )
+    .unwrap();
+
+    // Key 99 exists, but the committed registry pins author 42's key only.
+    let error = chain::reveal_secret(
+        99,
+        42,
+        Some(workspace.path("keys")),
+        &workspace.path("registry.json"),
+    )
+    .unwrap_err()
+    .to_string();
+    assert!(error.contains("does not match any epoch"), "{error}");
+}
+
 /// CI has no keyring and cannot decrypt a copied key file, so it signs from a
 /// seed held in a secret. That path must satisfy the same registry.
 #[test]

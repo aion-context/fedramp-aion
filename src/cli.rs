@@ -27,6 +27,23 @@ pub enum Command {
     Capture(CaptureArgs),
     /// Create the signing key and the registry that pins it.
     Keygen(KeygenArgs),
+    /// Print an existing key's seed on stdout, for piping into a CI secret.
+    Secret(SecretArgs),
+}
+
+#[derive(Args, Debug)]
+pub struct SecretArgs {
+    /// Keystore key id to reveal.
+    #[arg(long, default_value_t = 1)]
+    pub key: u64,
+    /// Author the key must be pinned for in the registry.
+    #[arg(long, default_value_t = 1)]
+    pub author: u64,
+    #[arg(long, env = "AION_KEYSTORE_DIR", value_name = "DIR")]
+    pub keystore: Option<PathBuf>,
+    /// Registry the key is checked against.
+    #[arg(long, default_value = "registry.json")]
+    pub registry: PathBuf,
 }
 
 #[derive(Args, Debug)]
