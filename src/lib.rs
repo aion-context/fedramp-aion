@@ -13,6 +13,7 @@ pub mod receipt;
 pub mod report;
 pub mod severity;
 pub mod sources;
+pub mod validate;
 
 use anyhow::{bail, Context, Result};
 use std::path::Path;
@@ -342,6 +343,120 @@ pub fn run_mcp(args: &cli::McpArgs) -> Result<i32> {
     let server = mcp::Server::load(&args.chain, &args.registry)?;
     mcp::serve(&server)?;
     Ok(0)
+}
+
+/// Validate a package offline against the signed schemas, optionally sealing
+/// the verdict into a receipt.
+pub fn run_validate(args: &cli::ValidateArgs) -> Result<i32> {
+    let bundle = chain::previous_bundle(&args.chain)?
+        .ok_or_else(|| anyhow::anyhow!("no chain at {}", args.chain.display()))?;
+    let schemas = validate::SchemaSet::from_bundle(&bundle)?;
+
+    if args.list_schemas {
+        emit(&format!("{}\n", schemas.names().join("\n")))?;
+        return Ok(0);
+    }
+
+    let package_bytes = std::fs::read(&args.package)
+        .with_context(|| format!("reading {}", args.package.display()))?;
+    let package: serde_json::Value = serde_json::from_slice(&package_bytes)
+        .with_context(|| format!("{} is not valid JSON", args.package.display()))?;
+    let schema_name = schemas.resolve_name(args.schema.as_deref(), &package)?;
+
+    let report = validate::validate(
+        &schemas,
+        bundle.section(sources::RULES),
+        &schema_name,
+        &package_bytes,
+        &args.package.display().to_string(),
+    )?;
+
+    if args.json {
+        emit(&format!("{}\n", serde_json::to_string_pretty(&report)?))?;
+    } else {
+        emit(&validate::report_markdown(&report))?;
+    }
+
+    if let Some(path) = &args.receipt {
+        issue_validation_receipt(args, &bundle, &report, path)?;
+    }
+    Ok(if report.valid { 0 } else { EXIT_THRESHOLD })
+}
+
+/// The receipt cites the rules that require the artifact, so the verdict is a
+/// compliance statement rather than a syntax check.
+fn issue_validation_receipt(
+    args: &cli::ValidateArgs,
+    bundle: &bundle::Bundle,
+    report: &validate::Report,
+    out: &Path,
+) -> Result<()> {
+    let (Some(operator), Some(key)) = (args.operator, args.key) else {
+        bail!("--receipt requires --operator and --key");
+    };
+    let registry = chain::load_registry(&args.registry)?;
+    let chain_report = chain::verify(&args.chain, &registry)?;
+
+    let profile = obligations::Profile {
+        role: args.role.clone(),
+        class: args.class.clone(),
+        cert_type: args.cert_type.clone(),
+        path: None,
+    };
+    let cited: Vec<obligations::Obligation> = bundle
+        .section(sources::RULES)
+        .map(|rules| obligations::select(rules, &profile))
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|o| report.required_by.contains(&o.id))
+        .collect();
+
+    let signer = chain::Signer {
+        author: operator,
+        key,
+        keystore_dir: args.keystore.clone(),
+        secret_hex: args.signing_key.clone(),
+    };
+    let sealed = receipt::create(
+        &receipt::Inputs {
+            action: &format!(
+                "Validated {} against {} — {}",
+                report.package,
+                report.schema,
+                if report.valid {
+                    "conformant"
+                } else {
+                    "non-conformant"
+                }
+            ),
+            decision: if report.valid {
+                receipt::Decision::Satisfied
+            } else {
+                receipt::Decision::NotSatisfied
+            },
+            operator,
+            receipt_version: 1,
+            profile: &profile,
+            obligations: &cited,
+            evidence: &[receipt::EvidenceRef {
+                name: report.package.clone(),
+                blake3: crate::canon::hex(blake3::hash(&std::fs::read(&args.package)?).as_bytes()),
+                bytes: report.bytes,
+            }],
+            bundle,
+            file_id: chain_report.file_id.0,
+            chain_version: chain_report.version_count,
+        },
+        &signer.load_key()?,
+        args.feed_author,
+    )?;
+    std::fs::write(out, serde_json::to_vec_pretty(&sealed)?)?;
+    println!(
+        "receipt written to {} — citing {} rule(s)",
+        out.display(),
+        cited.len()
+    );
+    Ok(())
 }
 
 pub fn run_capture(args: &CaptureArgs) -> Result<i32> {

@@ -37,6 +37,52 @@ pub enum Command {
     ReceiptVerify(ReceiptVerifyArgs),
     /// Serve the signed ruleset to agents over MCP (stdio).
     Mcp(McpArgs),
+    /// Validate a submission package against the signed schemas.
+    Validate(ValidateArgs),
+}
+
+#[derive(Args, Debug)]
+pub struct ValidateArgs {
+    /// The package to check. Never leaves this machine.
+    pub package: PathBuf,
+    /// Signed schema name. Inferred from the package's `$schema` if omitted.
+    #[arg(long)]
+    pub schema: Option<String>,
+    /// List the signed schema names and exit.
+    #[arg(long)]
+    pub list_schemas: bool,
+    #[arg(long, default_value = "fedramp.aion")]
+    pub chain: PathBuf,
+    #[arg(long, default_value = "registry.json")]
+    pub registry: PathBuf,
+    #[arg(long)]
+    pub json: bool,
+    /// Write a signed receipt for this verdict.
+    #[arg(long, value_name = "FILE")]
+    pub receipt: Option<PathBuf>,
+    /// Operator author id, required with --receipt.
+    #[arg(long)]
+    pub operator: Option<u64>,
+    /// Keystore key id, required with --receipt.
+    #[arg(long)]
+    pub key: Option<u64>,
+    #[arg(long, default_value_t = 1)]
+    pub feed_author: u64,
+    #[arg(long, env = "AION_KEYSTORE_DIR", value_name = "DIR")]
+    pub keystore: Option<PathBuf>,
+    #[arg(
+        long,
+        env = "AION_OPERATOR_KEY",
+        hide_env_values = true,
+        value_name = "HEX"
+    )]
+    pub signing_key: Option<String>,
+    #[arg(long, default_value = "Providers")]
+    pub role: String,
+    #[arg(long)]
+    pub class: Option<String>,
+    #[arg(long = "type", value_name = "TYPE")]
+    pub cert_type: Option<String>,
 }
 
 #[derive(Args, Debug)]

@@ -182,6 +182,55 @@ issue time rather than at verification.
 > when `--operator` equals the feed author: a receipt the feed signed about
 > itself attests to nothing.
 
+## Package validator
+
+Checks a submission package against the signed schemas, **offline**, and can
+seal the verdict into a receipt.
+
+```sh
+fedramp-aion validate --list-schemas .          # the 11 signed schema names
+fedramp-aion validate ocr.json                  # schema inferred from $schema
+fedramp-aion validate ocr.json --json           # exit 0 valid, 2 invalid
+
+fedramp-aion validate ocr.json --class B --type Rev5 \
+  --receipt validation-receipt.json --operator 5 --key 5 --keystore .keys
+```
+
+Real output against the published schemas:
+
+```
+# ocr.json — INVALID
+| schema        | fedramp-ongoing-certification-report-schema-2026-06-24.json |
+| findings      | 9 |
+| required by   | CCM-OCR-AVL |
+
+- `/plannedCertificationDataChanges` — "planningHorizonThrough" is a required property
+```
+
+Two things make this more than `jsonschema` with extra steps.
+
+**It resolves what FedRAMP publishes.** Their cross-schema `$ref`s are written
+as paths rather than fragments — `…common-definitions-….json/$defs/nRating` —
+and that URL returns 404, so an off-the-shelf validator dies at reference
+resolution before checking a single constraint. Resolution here is offline
+against the signed schemas, and **every repair is recorded in the report**, so
+the verdict never pretends the published bytes validated as they stand:
+
+```
+## Reference repairs
+- `…-2026-06-24.json/$defs/reportPeriodDate → …-2026-06-24.json#/$defs/reportPeriodDate`
+```
+
+A URI outside the signed set is an error, never a fetch. A verdict whose meaning
+depends on what a server returned today cannot be a durable receipt.
+
+**It names the rule that requires the artifact.** `required by: CCM-OCR-AVL` is
+a join from schema to the rules that bind it, out of the same signed ruleset —
+which is what makes the verdict a compliance statement rather than a syntax
+check. The receipt then cites that rule as the obligation it discharges.
+
+The package never leaves the machine, and only its digest enters the receipt.
+
 ## MCP server
 
 Serves the signed ruleset to agents over stdio, so an agent's answer about
@@ -269,7 +318,7 @@ for required checks instead of merging immediately.
 ## Tests
 
 ```sh
-cargo test          # 83 tests, no network
+cargo test          # 92 tests, no network
 cargo clippy --all-targets
 ```
 

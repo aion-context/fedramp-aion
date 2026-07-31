@@ -120,7 +120,11 @@ fn rules(version: &str, force: &str) -> Value {
 
 fn schemas() -> Value {
     json!({"fedramp-incident-report-schema-2026-06-24.json": {
-        "type": "object", "required": ["incident_id"]}})
+        "$id": "https://fedramp.gov/schemas/fedramp-incident-report-schema-2026-06-24.json",
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "required": ["incident_id"],
+        "properties": {"incident_id": {"type": "string"}}}})
 }
 
 fn marketplace(last_change: &str, reuse: i64, status: &str) -> Value {
@@ -436,6 +440,53 @@ fn marketplace_churn_reports_no_obligation_impact() {
 
     let report = std::fs::read_to_string(workspace.path("CHANGES.md")).unwrap();
     assert!(!report.contains("## Who this affects"), "{report}");
+}
+
+// ---- validator ------------------------------------------------------------
+
+/// The published schemas reference definitions by a path that 404s. Validation
+/// must resolve them offline and record the deviation.
+#[test]
+fn validation_resolves_the_broken_refs_offline_and_records_repairs() {
+    let workspace = seeded_workspace("validate");
+    let bundle = fedramp_aion::chain::previous_bundle(&workspace.path("fedramp.aion"))
+        .unwrap()
+        .unwrap();
+    let schemas = fedramp_aion::validate::SchemaSet::from_bundle(&bundle).unwrap();
+
+    let package = serde_json::to_vec(&json!({"incident_id": "INC-1"})).unwrap();
+    let report = fedramp_aion::validate::validate(
+        &schemas,
+        bundle.section("rules"),
+        "fedramp-incident-report-schema-2026-06-24.json",
+        &package,
+        "incident.json",
+    )
+    .unwrap();
+    assert!(report.valid, "{:?}", report.findings);
+    assert_eq!(report.package_sha256.len(), 64);
+}
+
+#[test]
+fn a_nonconformant_package_reports_findings_by_pointer() {
+    let workspace = seeded_workspace("validate-bad");
+    let bundle = fedramp_aion::chain::previous_bundle(&workspace.path("fedramp.aion"))
+        .unwrap()
+        .unwrap();
+    let schemas = fedramp_aion::validate::SchemaSet::from_bundle(&bundle).unwrap();
+
+    let package = serde_json::to_vec(&json!({})).unwrap();
+    let report = fedramp_aion::validate::validate(
+        &schemas,
+        None,
+        "fedramp-incident-report-schema-2026-06-24.json",
+        &package,
+        "empty.json",
+    )
+    .unwrap();
+    assert!(!report.valid);
+    assert!(!report.findings.is_empty());
+    assert!(report.findings[0].message.contains("incident_id"));
 }
 
 // ---- receipts -------------------------------------------------------------

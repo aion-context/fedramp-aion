@@ -225,7 +225,27 @@ because an agent will otherwise read silence as "nothing applies".
 No async runtime, no MCP SDK — the stdio transport is a line loop and the method
 set is small enough that a dependency would cost more than it saves.
 
-## 11. Still open
+## 11. Package validation
+
+`fedramp-aion validate` checks a package against the schemas as signed, and
+optionally seals the verdict into a receipt citing the rules that require the
+artifact.
+
+The resolver is the substance. FedRAMP's cross-schema `$ref`s name a resource
+that does not exist (`…json/$defs/name`, which 404s), so resolution is offline
+against the signed set, with the path form treated as the fragment it evidently
+means. **Every repair is recorded in the report and the receipt** — an artifact
+that silently deviated from the published bytes would be worse than none. A URI
+outside the signed set is an error, never a network fetch.
+
+Schema-to-rule binding uses the `schema.url` filename as the join key, so a
+verdict carries the rule ids that require the artifact (`CCM-OCR-AVL` for an
+ongoing certification report).
+
+Deliberately out of scope: semantic rule checking. "Valid per the schema" is not
+"satisfies VDR-FRP-*", and conflating them would oversell the receipt.
+
+## 12. Still open
 
 - Rev5 OSCAL baselines have no live home since `GSA/fedramp-automation` began
   404ing. If FedRAMP republishes them, they become a fourth source.
