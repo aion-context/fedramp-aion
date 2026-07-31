@@ -182,6 +182,44 @@ issue time rather than at verification.
 > when `--operator` equals the feed author: a receipt the feed signed about
 > itself attests to nothing.
 
+## MCP server
+
+Serves the signed ruleset to agents over stdio, so an agent's answer about
+FedRAMP cites a version rather than being trusted because a model said it.
+
+```sh
+claude mcp add fedramp -s user -- \
+  /path/to/fedramp-aion mcp \
+  --chain /path/to/fedramp.aion --registry /path/to/registry.json
+```
+
+Four tools, each returning its citation alongside the answer:
+
+| tool | answers |
+|---|---|
+| `fedramp_status` | which signed version this server speaks for, and whether the chain verified |
+| `fedramp_obligations` | the rules applying to a profile, class variant resolved |
+| `fedramp_rule` | one rule by FedRAMP id, e.g. `CPO-CSF-CPM` |
+| `fedramp_search` | full-text across the ruleset, returning ids to cite |
+
+Every result carries `provenance`:
+
+```json
+{
+  "chain_version": 1,
+  "chain_verified": true,
+  "bundle_sha256": "010e7f1e282c…",
+  "upstream_version": "2026.07.14.01",
+  "rules_commit": "083137da3b3cbd88eb55575fa2f153fb9a7b0e4c",
+  "rules_committed_at": "2026-07-14T21:11:57Z"
+}
+```
+
+The chain is loaded and **verified once at startup**, so every answer in a
+session speaks for the same version and a tampered chain fails before the
+server accepts a request. A missing rule is an error, not an empty answer —
+an agent should not read silence as "no obligation".
+
 ## Running as an action
 
 `.github/workflows/watch.yml` runs daily at 07:30 UTC (an hour after upstream's
@@ -231,7 +269,7 @@ for required checks instead of merging immediately.
 ## Tests
 
 ```sh
-cargo test          # 75 tests, no network
+cargo test          # 83 tests, no network
 cargo clippy --all-targets
 ```
 

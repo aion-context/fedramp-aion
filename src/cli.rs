@@ -35,6 +35,16 @@ pub enum Command {
     Receipt(ReceiptArgs),
     /// Verify a receipt: signature, claim binding, and the cited rules.
     ReceiptVerify(ReceiptVerifyArgs),
+    /// Serve the signed ruleset to agents over MCP (stdio).
+    Mcp(McpArgs),
+}
+
+#[derive(Args, Debug)]
+pub struct McpArgs {
+    #[arg(long, default_value = "fedramp.aion")]
+    pub chain: PathBuf,
+    #[arg(long, default_value = "registry.json")]
+    pub registry: PathBuf,
 }
 
 #[derive(Args, Debug)]

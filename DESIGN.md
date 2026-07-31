@@ -210,7 +210,22 @@ carried as strings. No upstream source currently contains an integer over 2^53
 — verified across all three — but a future one would corrupt the bundle the same
 way.
 
-## 10. Still open
+## 10. Agent surface
+
+`fedramp-aion mcp` serves the signed ruleset over newline-delimited JSON-RPC on
+stdio. The design constraint is that **every tool result carries the chain
+version, bundle digest, and upstream commit it came from** — an agent citing
+FedRAMP can then be checked against a signed artifact instead of believed.
+
+The chain is verified once at startup rather than per call, so a session cannot
+straddle two versions and a tampered chain fails before any request is served.
+Errors are errors: an unknown rule id returns `isError`, never an empty result,
+because an agent will otherwise read silence as "nothing applies".
+
+No async runtime, no MCP SDK — the stdio transport is a line loop and the method
+set is small enough that a dependency would cost more than it saves.
+
+## 11. Still open
 
 - Rev5 OSCAL baselines have no live home since `GSA/fedramp-automation` began
   404ing. If FedRAMP republishes them, they become a fourth source.

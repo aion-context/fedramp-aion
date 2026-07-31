@@ -6,6 +6,7 @@ pub mod canon;
 pub mod chain;
 pub mod cli;
 pub mod diff;
+pub mod mcp;
 pub mod obligations;
 pub mod plan;
 pub mod receipt;
@@ -333,6 +334,14 @@ pub fn run_receipt_verify(args: &ReceiptVerifyArgs) -> Result<i32> {
         emit(&receipt::verdict_markdown(&sealed, &verdict))?;
     }
     Ok(i32::from(!verdict.is_valid()))
+}
+
+/// Serve MCP on stdio. The chain is loaded and verified once, so every answer
+/// in a session cites the same signed version.
+pub fn run_mcp(args: &cli::McpArgs) -> Result<i32> {
+    let server = mcp::Server::load(&args.chain, &args.registry)?;
+    mcp::serve(&server)?;
+    Ok(0)
 }
 
 pub fn run_capture(args: &CaptureArgs) -> Result<i32> {

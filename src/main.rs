@@ -15,6 +15,7 @@ fn main() -> Result<()> {
         Command::Obligations(args) => fedramp_aion::run_obligations(args),
         Command::Receipt(args) => fedramp_aion::run_receipt(args),
         Command::ReceiptVerify(args) => fedramp_aion::run_receipt_verify(args),
+        Command::Mcp(args) => fedramp_aion::run_mcp(args),
     }?;
     if code != 0 {
         std::process::exit(code);
