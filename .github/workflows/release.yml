@@ -1,0 +1,96 @@
+name: release
+
+# Publishes the signed chain as a downloadable artifact whenever a new version
+# lands on main. The chain in the repo is the source of truth; a release is a
+# stable, citable URL for the state at that version.
+on:
+  push:
+    branches: [main]
+    paths: ['fedramp.aion']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fedramp-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # This org permits GitHub-owned actions only.
+      - name: rust toolchain
+        run: |
+          rustup toolchain install stable --profile minimal --no-self-update
+          rustup default stable
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: cargo-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+
+      - run: cargo build --release --locked
+
+      # Refuse to publish an artifact that does not verify.
+      - name: verify before publishing
+        id: chain
+        run: |
+          set -euo pipefail
+          ./target/release/fedramp-aion verify | tee verify.txt
+          version=$(grep -oE '[0-9]+ version' verify.txt | grep -oE '[0-9]+')
+          upstream=$(jq -r '.info.version' data/rules.json)
+          {
+            echo "version=$version"
+            echo "upstream=$upstream"
+            echo "tag=chain-v$version"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: publish release
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT || github.token }}
+          TAG: ${{ steps.chain.outputs.tag }}
+          VERSION: ${{ steps.chain.outputs.version }}
+          UPSTREAM: ${{ steps.chain.outputs.upstream }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "release $TAG already exists"
+            exit 0
+          fi
+          {
+            echo "Signed FedRAMP chain, version **$VERSION**."
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| upstream rules version | \`$UPSTREAM\` |"
+            echo "| chain version | $VERSION |"
+            echo
+            echo '```'
+            cat verify.txt
+            echo '```'
+            echo
+            echo "Verify this artifact independently:"
+            echo
+            echo '```sh'
+            echo "gh release download $TAG --repo \$GITHUB_REPOSITORY"
+            echo 'aion verify fedramp.aion --registry registry.json'
+            echo '```'
+            echo
+            echo "\`registry.json\` pins the public key; no private material is published."
+          } > notes.md
+          gh release create "$TAG" \
+            --title "FedRAMP chain v$VERSION — rules $UPSTREAM" \
+            --notes-file notes.md \
+            fedramp.aion \
+            registry.json \
+            data/rules.json \
+            data/schemas.json \
+            data/marketplace.json \
+            data/provenance.json
