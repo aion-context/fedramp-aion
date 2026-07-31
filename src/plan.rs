@@ -55,9 +55,6 @@ impl Plan {
     /// reading "RULES CHANGED" when NIST republished 800-53 would be a lie, and
     /// so would "CHANGED" for a source that was merely added to the bundle.
     fn headline_subject(&self, moved: &[&str]) -> String {
-        if self.severity < Severity::Major {
-            return self.severity.headline().to_string();
-        }
         fn label(source: &str) -> &str {
             match source {
                 RULES => "RULES",
@@ -67,6 +64,9 @@ impl Plan {
                 MARKETPLACE => "MARKETPLACE",
                 other => other,
             }
+        }
+        if self.severity < Severity::Major {
+            return self.severity.headline().to_string();
         }
         let major: Vec<&Delta> = self
             .deltas
