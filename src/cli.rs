@@ -41,6 +41,21 @@ pub enum Command {
     Validate(ValidateArgs),
     /// Show a NIST 800-53 control and any FedRAMP overlay for it.
     Control(ControlArgs),
+    /// Look up a CVE in the signed KEV catalog and the rules governing it.
+    Kev(KevArgs),
+}
+
+#[derive(Args, Debug)]
+pub struct KevArgs {
+    /// CVE id, e.g. CVE-2026-20316. Omit to summarise the catalog.
+    pub cve: Option<String>,
+    #[arg(long, default_value = "fedramp.aion")]
+    pub chain: PathBuf,
+    /// Only entries due on or before this date (YYYY-MM-DD).
+    #[arg(long)]
+    pub due_before: Option<String>,
+    #[arg(long)]
+    pub json: bool,
 }
 
 #[derive(Args, Debug)]

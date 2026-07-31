@@ -21,6 +21,7 @@ published by NIST directly** at `usnistgov/oscal-content`, which is where the
 | `schemas` | `FedRAMP/schemas` | `*.json` (dir) | 11 CR26 package JSON Schemas |
 | `marketplace` | `FedRAMP/marketplace-fedramp-gov-data` | `data.json` | 4.4 MB; `meta` + 7 collections |
 | `oscal` | `usnistgov/oscal-content` | `nist.gov/SP800-53/rev5/json/…catalog-min.json` | 4.9 MB; 1,196 controls in 20 groups |
+| `kev` | `cisagov/kev-data` | `known_exploited_vulnerabilities.json` | 1.6 MB; 1,656 CVEs. CISA's own mirror of the cisa.gov feed, so it is commit-pinnable like the rest |
 
 Neither repo tags releases, so `main` is not a stable reference. Every run
 resolves `main` → **commit SHA for that path**, then fetches the raw bytes at
@@ -40,6 +41,10 @@ These measurements drive the design; re-check them if the pipeline misbehaves.
   `info.last_updated` were bumped in a *separate, later* commit than the
   content edits. **Change detection must never key on `info.version`** — a
   mid-burst fetch sees new content under an old version string.
+- **KEV's `catalogVersion` is not unique.** Two publishes on 2026-07-27 shared
+  version `2026.07.27` while the second added a CVE (1654 → 1655). Like
+  `info.version` on rules, it must never be the change key — only the
+  vulnerability list may drive the verdict.
 - **`ReuseMapping.id` is not unique** (316 distinct ids across 2813 rows; even
   the `(id, agency_id, sub_id, sub)` composite only reaches 2617). It must be
   diffed as a multiset, not a keyed collection.
@@ -68,6 +73,7 @@ resolve → fetch → canonicalize → project → digest → compare → diff �
    | `schemas` | — | identity |
    | `marketplace` | `meta` | `meta.last_change` moves daily with no content change |
    | `oscal` | `catalog.uuid`, `metadata.last-modified`, `metadata.oscal-version` | measured: all three moved between the 2025-08-27 and 2026-05-13 publishes while the control text was byte-identical. `metadata.version` (5.2.0) is kept — it is the real revision |
+   | `kev` | `dateReleased`, `count` | `dateReleased` moves on every publish; `count` is derived from the array, so keeping it would report one added CVE twice |
 
 5. **digest** — `content_sha256` over the whole canonical doc,
    `substance_sha256` over the projection. The gate reads `substance_sha256`.
@@ -129,8 +135,8 @@ Product field changes are split into two buckets:
 | severity | trigger |
 |---|---|
 | `major` | any `rules` leaf added/removed/modified, any `schemas` change, or an 800-53 control **that FedRAMP references** |
-| `minor` | marketplace product add/remove or a **material** field change |
-| `routine` | marketplace **counter**-only movement, mapping rows, or an 800-53 control FedRAMP does not reference |
+| `minor` | marketplace product add/remove, a **material** field change, or a newly listed KEV CVE |
+| `routine` | marketplace **counter**-only movement, mapping rows, an 800-53 control FedRAMP does not reference, or an edit to an existing KEV entry |
 | `metadata` | only `info.*` moved in rules |
 | `none` | nothing moved — no commit |
 

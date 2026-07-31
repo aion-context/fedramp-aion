@@ -508,6 +508,85 @@ pub fn run_control(args: &cli::ControlArgs) -> Result<i32> {
     Ok(0)
 }
 
+/// FedRAMP requires action on known exploited vulnerabilities but does not
+/// carry the list; this joins CISA's catalog to the rules that govern it.
+pub fn run_kev(args: &cli::KevArgs) -> Result<i32> {
+    let bundle = chain::previous_bundle(&args.chain)?
+        .ok_or_else(|| anyhow::anyhow!("no chain at {}", args.chain.display()))?;
+    let catalog = bundle
+        .section(sources::KEV)
+        .ok_or_else(|| anyhow::anyhow!("chain has no kev section; re-sync to add it"))?;
+    let entries = diff::kev::flatten(catalog);
+    let governing = bundle
+        .section(sources::RULES)
+        .map(diff::kev::governing_rules)
+        .unwrap_or_default();
+
+    if let Some(cve) = &args.cve {
+        let entry = entries
+            .get(&cve.to_ascii_uppercase())
+            .ok_or_else(|| anyhow::anyhow!("{cve} is not in the signed KEV catalog"))?;
+        let payload = serde_json::json!({
+            "cve": cve.to_ascii_uppercase(),
+            "entry": entry,
+            "governed_by": governing,
+        });
+        if args.json {
+            emit(&format!("{}\n", serde_json::to_string_pretty(&payload)?))?;
+        } else {
+            let field = |k: &str| {
+                entry
+                    .get(k)
+                    .and_then(serde_json::Value::as_str)
+                    .unwrap_or("—")
+            };
+            emit(&format!(
+                "# {} — known exploited\n\n{} {}\n{}\n\ndue: {}\nransomware: {}\nrequired action: {}\n\ngoverned by: {}\n",
+                cve.to_ascii_uppercase(),
+                field("vendorProject"),
+                field("product"),
+                field("vulnerabilityName"),
+                field("dueDate"),
+                field("knownRansomwareCampaignUse"),
+                field("requiredAction"),
+                if governing.is_empty() { "—".to_string() } else { governing.join(", ") },
+            ))?;
+        }
+        return Ok(0);
+    }
+
+    let due: Vec<&String> = args
+        .due_before
+        .as_ref()
+        .map(|cutoff| {
+            entries
+                .iter()
+                .filter(|(_, e)| {
+                    e.get("dueDate")
+                        .and_then(serde_json::Value::as_str)
+                        .is_some_and(|d| d <= cutoff.as_str())
+                })
+                .map(|(id, _)| id)
+                .collect()
+        })
+        .unwrap_or_default();
+    emit(&format!(
+        "{} known exploited vulnerabilities in the signed catalog\ngoverned by: {}\n{}",
+        entries.len(),
+        if governing.is_empty() {
+            "—".to_string()
+        } else {
+            governing.join(", ")
+        },
+        args.due_before.as_ref().map_or(String::new(), |c| format!(
+            "{} due on or before {}\n",
+            due.len(),
+            c
+        )),
+    ))?;
+    Ok(0)
+}
+
 pub fn run_capture(args: &CaptureArgs) -> Result<i32> {
     std::fs::create_dir_all(&args.out)?;
     let fetcher = fetcher(&args.sources);

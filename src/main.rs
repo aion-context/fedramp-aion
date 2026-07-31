@@ -18,6 +18,7 @@ fn main() -> Result<()> {
         Command::Mcp(args) => fedramp_aion::run_mcp(args),
         Command::Validate(args) => fedramp_aion::run_validate(args),
         Command::Control(args) => fedramp_aion::run_control(args),
+        Command::Kev(args) => fedramp_aion::run_kev(args),
     }?;
     if code != 0 {
         std::process::exit(code);

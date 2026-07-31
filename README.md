@@ -15,6 +15,7 @@ require on date X, and who says so?**
 | `schemas` | [`FedRAMP/schemas`](https://github.com/FedRAMP/schemas) | 11 machine-readable submission package schemas |
 | `marketplace` | [`FedRAMP/marketplace-fedramp-gov-data`](https://github.com/FedRAMP/marketplace-fedramp-gov-data) | 670 products, 244 agencies, 50 assessors, authorization/reuse mappings |
 | `oscal` | [`usnistgov/oscal-content`](https://github.com/usnistgov/oscal-content) | NIST SP 800-53 rev5 catalog — 1,196 controls, the text FedRAMP amends but never restates |
+| `kev` | [`cisagov/kev-data`](https://github.com/cisagov/kev-data) | CISA Known Exploited Vulnerabilities — 1,656 CVEs with due dates and required actions |
 
 There is no REST API on `fedramp.gov`. `GSA/fedramp-automation` — the old home
 of the OSCAL baselines — now 404s, but the content lives at NIST itself, which
@@ -35,6 +36,19 @@ systems, and for which the organization has no direct control over …
 
 Ids normalise across both conventions — FedRAMP writes `AC-06-01`, OSCAL writes
 `ac-6.1`.
+
+FedRAMP defines KEV as a term (`FRD-KEV`) and hangs remediation duties off it
+without carrying the list. `fedramp-aion kev CVE-2026-20316` joins the two:
+
+```
+# CVE-2026-20316 — known exploited
+Cisco Secure Firewall Management Center (FMC)
+due: 2026-08-01   ransomware: Unknown
+governed by: VDR-CSO-AKE, VDR-TFR-KEV
+```
+
+The governing rules are discovered through FedRAMP's own `FRD-KEV` aliases
+rather than a hardcoded list, so they follow the ruleset when it moves.
 
 ## Status
 
@@ -101,6 +115,13 @@ control text was **byte-identical** — a naive gate would have announced an
 800-53 severity is relative to FedRAMP: a changed control the ruleset
 references is `major`, one it ignores is `routine`. Otherwise a single NIST
 revision (1,196 controls) would bury a rules change.
+
+KEV has the same trap in a different place. CISA publishes 2–3×/week, and
+`catalogVersion` is **not** unique: two publishes on 2026-07-27 carried
+different content under version `2026.07.27`, one of them adding a CVE. The
+gate therefore reads only the vulnerability list — `dateReleased` and the
+derived `count` are stripped. A newly listed CVE is `minor`; an edit to an
+existing entry is `routine`.
 
 Severity ranks what moved so a rule change is never buried:
 
@@ -277,6 +298,7 @@ Four tools, each returning its citation alongside the answer:
 | `fedramp_rule` | one rule by FedRAMP id, e.g. `CPO-CSF-CPM` |
 | `fedramp_search` | full-text across the ruleset, returning ids to cite |
 | `fedramp_control` | the 800-53 control text behind a reference, plus FedRAMP's overlay |
+| `fedramp_kev` | whether a CVE is known-exploited, its due date, and the rules governing it |
 
 Every result carries `provenance`:
 
@@ -345,7 +367,7 @@ for required checks instead of merging immediately.
 ## Tests
 
 ```sh
-cargo test          # 101 tests, no network
+cargo test          # 105 tests, no network
 cargo clippy --all-targets
 ```
 

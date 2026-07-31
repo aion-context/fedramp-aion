@@ -6,7 +6,7 @@ use serde::Serialize;
 use crate::bundle::Bundle;
 use crate::diff::{self, Delta};
 use crate::severity::Severity;
-use crate::sources::{self, Fetcher, Snapshot, MARKETPLACE, OSCAL, RULES, SCHEMAS};
+use crate::sources::{self, Fetcher, Snapshot, KEV, MARKETPLACE, OSCAL, RULES, SCHEMAS};
 
 #[derive(Debug, Serialize)]
 pub struct Plan {
@@ -159,6 +159,7 @@ fn delta_for(
         SCHEMAS => diff::schemas::diff(before, after),
         MARKETPLACE => diff::marketplace::diff(before, after),
         OSCAL => diff::oscal::diff(before, after, referenced),
+        KEV => diff::kev::diff(before, after),
         _ => {
             let mut delta = Delta::new(&snapshot.id);
             delta.changed = true;
@@ -190,6 +191,12 @@ fn genesis_counts(snapshot: &Snapshot) -> std::collections::BTreeMap<String, usi
         RULES => {
             let (leaves, _) = diff::rules::flatten(&snapshot.content);
             counts.insert("rules".to_string(), leaves.len());
+        }
+        KEV => {
+            counts.insert(
+                "known_exploited_vulnerabilities".to_string(),
+                diff::kev::flatten(&snapshot.content).len(),
+            );
         }
         OSCAL => {
             counts.insert(
@@ -268,12 +275,18 @@ mod tests {
             "groups": [{"id": "ac", "controls": [{"id": "ac-20", "title": "Use of External Systems"}]}]}})
     }
 
+    fn kev() -> Value {
+        json!({"catalogVersion": "2026.07.29", "dateReleased": "2026-07-29T18:45:59Z", "count": 1,
+               "vulnerabilities": [{"cveID": "CVE-2026-1", "dueDate": "2026-08-01"}]})
+    }
+
     fn all(version: &str, force: &str, reuse: i64) -> Vec<Snapshot> {
         vec![
             snapshot(RULES, rules(version, force)),
             snapshot(SCHEMAS, schemas()),
             snapshot(MARKETPLACE, market(reuse)),
             snapshot(OSCAL, oscal()),
+            snapshot(KEV, kev()),
         ]
     }
 

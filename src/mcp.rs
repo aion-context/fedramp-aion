@@ -108,6 +108,7 @@ impl Server {
             "fedramp_rule" => self.rule(arguments),
             "fedramp_search" => self.search(arguments),
             "fedramp_control" => self.control(arguments),
+            "fedramp_kev" => self.kev(arguments),
             other => anyhow::bail!("unknown tool `{other}`"),
         }
     }
@@ -208,6 +209,33 @@ impl Server {
         }))
     }
 
+    /// Whether a CVE is known-exploited, and which FedRAMP rules govern the
+    /// response. FedRAMP defines the term but never carries the list.
+    fn kev(&self, arguments: &Value) -> Result<Value> {
+        let catalog = self
+            .bundle
+            .section(crate::sources::KEV)
+            .context("chain payload has no kev section; re-sync to add it")?;
+        let entries = crate::diff::kev::flatten(catalog);
+        let governed_by = crate::diff::kev::governing_rules(self.rules()?);
+
+        let Some(cve) = arguments.get("cve").and_then(Value::as_str) else {
+            return Ok(json!({
+                "count": entries.len(),
+                "governed_by": governed_by,
+                "provenance": self.provenance(),
+            }));
+        };
+        let id = cve.to_ascii_uppercase();
+        Ok(json!({
+            "cve": id,
+            "known_exploited": entries.contains_key(&id),
+            "entry": entries.get(&id),
+            "governed_by": governed_by,
+            "provenance": self.provenance(),
+        }))
+    }
+
     fn search(&self, arguments: &Value) -> Result<Value> {
         let query = arguments
             .get("query")
@@ -291,6 +319,16 @@ fn tool_definitions() -> Value {
                 "type": "object",
                 "properties": {"id": {"type": "string"}},
                 "required": ["id"],
+            },
+        },
+        {
+            "name": "fedramp_kev",
+            "description": "Whether a CVE is in CISA's Known Exploited Vulnerabilities catalog, \
+                            with its due date and required action, plus the FedRAMP rules that \
+                            govern the response. Omit `cve` for a catalog summary.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {"cve": {"type": "string", "description": "e.g. CVE-2026-20316"}},
             },
         },
         {
@@ -446,7 +484,7 @@ mod tests {
             .handle(&json!({"jsonrpc": "2.0", "id": 2, "method": "tools/list"}))
             .unwrap();
         let tools = response["result"]["tools"].as_array().unwrap();
-        assert_eq!(tools.len(), 5);
+        assert_eq!(tools.len(), 6);
         for tool in tools {
             assert!(tool["name"].is_string());
             assert!(tool["description"].is_string());

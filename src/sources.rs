@@ -12,6 +12,7 @@ pub const RULES: &str = "rules";
 pub const SCHEMAS: &str = "schemas";
 pub const MARKETPLACE: &str = "marketplace";
 pub const OSCAL: &str = "oscal";
+pub const KEV: &str = "kev";
 
 /// Where a source lives and how its substance projection is taken.
 pub struct SourceSpec {
@@ -53,6 +54,18 @@ pub const SOURCES: &[SourceSpec] = &[
             &["catalog", "metadata", "last-modified"],
             &["catalog", "metadata", "oscal-version"],
         ],
+    },
+    // CISA republishes several times a week. `dateReleased` moves every time;
+    // `count` is derived from the array, so keeping it would report a CVE
+    // addition twice. `catalogVersion` is date-based and NOT unique — two
+    // publishes on 2026-07-27 carried different content under the same
+    // version — so it is never used as the change key.
+    SourceSpec {
+        id: KEV,
+        repo: "cisagov/kev-data",
+        path: "known_exploited_vulnerabilities.json",
+        is_dir: false,
+        volatile: &[&["dateReleased"], &["count"]],
     },
     SourceSpec {
         id: MARKETPLACE,

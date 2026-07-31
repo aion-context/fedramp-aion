@@ -1,6 +1,7 @@
 //! Semantic diffs. A byte-level diff is useless here: upstream rewrites the
 //! marketplace file every day and reformats the rules file at will.
 
+pub mod kev;
 pub mod marketplace;
 pub mod oscal;
 pub mod rules;

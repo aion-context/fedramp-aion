@@ -41,6 +41,7 @@ impl Workspace {
             ("schemas", schemas),
             ("marketplace", marketplace),
             ("oscal", &oscal()),
+            ("kev", &kev()),
         ] {
             std::fs::write(
                 self.path(&format!("upstream/{name}.json")),
@@ -136,6 +137,12 @@ fn oscal() -> Value {
                      "oscal-version": "1.2.2"},
         "groups": [{"id": "cp", "title": "Contingency Planning", "controls": [
             {"id": "cp-3", "title": "Contingency Training"}]}]}})
+}
+
+fn kev() -> Value {
+    json!({"catalogVersion": "2026.07.29", "dateReleased": "2026-07-29T18:45:59.5809Z", "count": 1,
+           "vulnerabilities": [{"cveID": "CVE-2026-20316", "vendorProject": "Cisco",
+                                "dueDate": "2026-08-19", "knownRansomwareCampaignUse": "Unknown"}]})
 }
 
 fn marketplace(last_change: &str, reuse: i64, status: &str) -> Value {
