@@ -93,6 +93,47 @@ Attention: FRR/CPO/rev5/CSF/CPO-CSF-CPM (class a) SHOULD → (absent)
 That output is a replay of the real 2026-07-06 → 2026-07-14 upstream delta; it
 reproduces all seven of FedRAMP's own commits for that day.
 
+## Obligations
+
+Which rules apply to *you*, with the class-specific variant resolved:
+
+```sh
+fedramp-aion obligations --role Providers --class B --type Rev5 --path Agency
+fedramp-aion obligations --class B --type Rev5 --force MUST --json
+fedramp-aion obligations --with-schema        # only rules binding an artifact
+```
+
+Read from the signed chain by default, so what it lists is what was signed.
+Against chain v1: a Rev5 Class B provider carries **162 obligations, 101
+binding**; a Class A provider carries 47, because most subsets declare classes
+B–D only.
+
+Applicability is assembled from four places, because no single one is complete:
+
+| dimension | source | fallback |
+|---|---|---|
+| certification type | the `data.<type>` path | always present |
+| affected party | the rule's `affects` | subset applicability |
+| class | `varies_by_class` keys | subset `classes`, else unconstrained |
+| path | subset `paths` | unconstrained |
+
+A class absent from `varies_by_class` has **no** obligation under that rule,
+whatever the subset declares — that is how "Class A maintenance requirements
+removed" is expressed in the data.
+
+When the rules move, the change report gains a **Who this affects** table
+translating the diff into per-profile obligation deltas. Replaying the real
+2026-07-06 → 2026-07-14 upstream delta:
+
+| profile | added | removed | changed | binding shifts |
+|---|---|---|---|---|
+| Providers, class A, type Rev5 | 1 | 1 | 0 | — |
+| Providers, class B, type Rev5 | 1 | 0 | 0 | — |
+| Agencies | 0 | 4 | 0 | — |
+
+Class A Rev5 is the only profile that lost an obligation, and agencies lost
+four — matching FedRAMP's own commit messages for that day.
+
 ## Running as an action
 
 `.github/workflows/watch.yml` runs daily at 07:30 UTC (an hour after upstream's
@@ -142,7 +183,7 @@ for required checks instead of merging immediately.
 ## Tests
 
 ```sh
-cargo test          # 56 tests, no network
+cargo test          # 68 tests, no network
 cargo clippy --all-targets
 ```
 

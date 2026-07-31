@@ -79,6 +79,8 @@ pub fn changes_markdown(plan: &Plan) -> String {
         out.push('\n');
     }
 
+    out.push_str(&obligation_impact(plan));
+
     for delta in &plan.deltas {
         out.push_str(&source_section(delta));
     }
@@ -91,6 +93,82 @@ pub fn changes_markdown(plan: &Plan) -> String {
         }
         out.push('\n');
     }
+    out
+}
+
+/// The profiles reported on by default. Deliberately small: enough to show
+/// who a change lands on, not a combinatorial dump.
+fn default_profiles() -> Vec<crate::obligations::Profile> {
+    use crate::obligations::Profile;
+    let mut profiles = Vec::new();
+    for cert_type in ["20x", "Rev5"] {
+        for class in ["A", "B", "C", "D"] {
+            profiles.push(Profile {
+                role: "Providers".into(),
+                class: Some(class.into()),
+                cert_type: Some(cert_type.into()),
+                path: None,
+            });
+        }
+    }
+    for role in ["Agencies", "Assessors", "Advisors"] {
+        profiles.push(Profile {
+            role: role.into(),
+            ..Profile::default()
+        });
+    }
+    profiles
+}
+
+/// Translates a rule change into affected parties. Silent when the rules did
+/// not move, so marketplace churn does not generate noise here.
+fn obligation_impact(plan: &Plan) -> String {
+    let Some(before) = &plan.previous_rules else {
+        return String::new();
+    };
+    let Some(after) = plan.bundle.section(crate::sources::RULES) else {
+        return String::new();
+    };
+    if !plan.delta(crate::sources::RULES).is_some_and(|d| d.changed) {
+        return String::new();
+    }
+
+    let mut rows = Vec::new();
+    for profile in default_profiles() {
+        let delta = crate::obligations::delta(before, after, &profile);
+        if delta.is_empty() {
+            continue;
+        }
+        let shifts = delta.binding_shifts().len();
+        rows.push(format!(
+            "| {} | {} | {} | {} | {} |",
+            profile.label(),
+            delta.added.len(),
+            delta.removed.len(),
+            delta.changed.len(),
+            if shifts > 0 {
+                shifts.to_string()
+            } else {
+                "—".into()
+            }
+        ));
+    }
+    if rows.is_empty() {
+        return String::new();
+    }
+
+    let mut out = String::from("## Who this affects\n\n");
+    let _ = writeln!(
+        out,
+        "| profile | added | removed | changed | binding shifts |"
+    );
+    let _ = writeln!(out, "|---|---|---|---|---|");
+    for row in rows {
+        let _ = writeln!(out, "{row}");
+    }
+    out.push_str(
+        "\nA binding shift is an obligation crossing into or out of MUST for that profile.\n\n",
+    );
     out
 }
 
@@ -169,6 +247,37 @@ fn list(out: &mut String, label: &str, ids: &[String]) {
     out.push('\n');
 }
 
+/// The obligation listing for one profile.
+pub fn obligations_markdown(
+    profile: &crate::obligations::Profile,
+    selected: &[crate::obligations::Obligation],
+) -> String {
+    let mut out = String::new();
+    let binding = selected.iter().filter(|o| o.is_binding()).count();
+    let _ = writeln!(out, "# Obligations — {}\n", profile.label());
+    let _ = writeln!(out, "{} obligations, {binding} binding\n", selected.len());
+    for o in selected {
+        let class = o
+            .class
+            .as_deref()
+            .map_or(String::new(), |c| format!(" (class {c})"));
+        let timeframe = o
+            .timeframe
+            .as_deref()
+            .map_or(String::new(), |t| format!(" [{t}]"));
+        let _ = writeln!(out, "## {} — {}{class}{timeframe}", o.id, o.force);
+        if let Some(name) = &o.name {
+            let _ = writeln!(out, "{name}");
+        }
+        let _ = writeln!(out, "{}", o.statement);
+        if let Some(schema) = &o.schema {
+            let _ = writeln!(out, "artifact: {schema}");
+        }
+        out.push('\n');
+    }
+    out
+}
+
 /// `key=value` lines for `$GITHUB_OUTPUT`.
 pub fn github_outputs(plan: &Plan, chain_version: Option<u64>) -> String {
     let mut out = String::new();
@@ -229,6 +338,7 @@ mod tests {
             previous_upstream_version: Some("2026.07.14.01".into()),
             bundle_sha256: "abc123".into(),
             deltas: vec![rules, marketplace],
+            previous_rules: None,
             bundle: crate::bundle::Bundle {
                 schema: crate::bundle::SCHEMA.into(),
                 upstream_version: "2026.08.01.01".into(),

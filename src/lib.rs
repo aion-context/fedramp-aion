@@ -6,6 +6,7 @@ pub mod canon;
 pub mod chain;
 pub mod cli;
 pub mod diff;
+pub mod obligations;
 pub mod plan;
 pub mod report;
 pub mod severity;
@@ -14,9 +15,20 @@ pub mod sources;
 use anyhow::{bail, Result};
 use std::path::Path;
 
-use crate::cli::{CaptureArgs, KeygenArgs, PlanArgs, SyncArgs, VerifyArgs};
+use crate::cli::{CaptureArgs, KeygenArgs, ObligationArgs, PlanArgs, SyncArgs, VerifyArgs};
 use crate::plan::Plan;
 use crate::sources::Fetcher;
+
+/// Write to stdout, treating a closed pipe as success rather than a panic.
+/// `head` closing the pipe is normal use, not an error.
+fn emit(text: &str) -> Result<()> {
+    use std::io::Write as _;
+    let mut out = std::io::stdout().lock();
+    match out.write_all(text.as_bytes()).and_then(|()| out.flush()) {
+        Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => Ok(()),
+        other => Ok(other?),
+    }
+}
 
 /// Exit code used when `--fail-on` trips. Distinct from 1 (pipeline error).
 pub const EXIT_THRESHOLD: i32 = 2;
@@ -37,7 +49,7 @@ pub fn run_plan(args: &PlanArgs) -> Result<i32> {
     if args.json {
         println!("{}", serde_json::to_string_pretty(&plan)?);
     } else {
-        print!("{}", report::changes_markdown(&plan));
+        emit(&report::changes_markdown(&plan))?;
     }
     Ok(threshold_code(&plan, args))
 }
@@ -168,6 +180,43 @@ pub fn run_secret(args: &cli::SecretArgs) -> Result<i32> {
         args.registry.display()
     );
     println!("{secret}");
+    Ok(0)
+}
+
+/// Reads the ruleset from the signed chain by default, so what is listed is
+/// what was signed — not whatever is on disk.
+pub fn run_obligations(args: &ObligationArgs) -> Result<i32> {
+    let rules: serde_json::Value = if let Some(path) = &args.rules {
+        canon::canonicalize(&std::fs::read(path)?)?
+    } else {
+        let bundle = chain::previous_bundle(&args.chain)?
+            .ok_or_else(|| anyhow::anyhow!("no chain at {}", args.chain.display()))?;
+        bundle
+            .section(sources::RULES)
+            .cloned()
+            .ok_or_else(|| anyhow::anyhow!("chain payload has no rules section"))?
+    };
+
+    let profile = obligations::Profile {
+        role: args.role.clone(),
+        class: args.class.clone(),
+        cert_type: args.cert_type.clone(),
+        path: args.path.clone(),
+    };
+    let selected: Vec<obligations::Obligation> = obligations::select(&rules, &profile)
+        .into_iter()
+        .filter(|o| {
+            args.force
+                .as_ref()
+                .is_none_or(|f| o.force.eq_ignore_ascii_case(f))
+        })
+        .filter(|o| !args.with_schema || o.schema.is_some())
+        .collect();
+
+    if args.json {
+        return emit(&format!("{}\n", serde_json::to_string_pretty(&selected)?)).map(|()| 0);
+    }
+    emit(&report::obligations_markdown(&profile, &selected))?;
     Ok(0)
 }
 

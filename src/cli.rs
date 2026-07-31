@@ -29,6 +29,38 @@ pub enum Command {
     Keygen(KeygenArgs),
     /// Print an existing key's seed on stdout, for piping into a CI secret.
     Secret(SecretArgs),
+    /// List the obligations that apply to a given profile.
+    Obligations(ObligationArgs),
+}
+
+#[derive(Args, Debug)]
+pub struct ObligationArgs {
+    /// Party the rules apply to: Providers, Agencies, Assessors, Advisors, FedRAMP.
+    #[arg(long, default_value = "Providers")]
+    pub role: String,
+    /// Certification class A-D. Omitted means any, reporting the strictest variant.
+    #[arg(long)]
+    pub class: Option<String>,
+    /// Certification type: 20x or Rev5.
+    #[arg(long = "type", value_name = "TYPE")]
+    pub cert_type: Option<String>,
+    /// Authorization path: Program or Agency.
+    #[arg(long)]
+    pub path: Option<String>,
+    /// Only obligations at this force, e.g. MUST.
+    #[arg(long)]
+    pub force: Option<String>,
+    /// Only obligations that bind a machine-readable artifact.
+    #[arg(long)]
+    pub with_schema: bool,
+    /// Read rules from this file instead of the chain.
+    #[arg(long, value_name = "FILE")]
+    pub rules: Option<PathBuf>,
+    /// Chain to read the signed ruleset from.
+    #[arg(long, default_value = "fedramp.aion")]
+    pub chain: PathBuf,
+    #[arg(long)]
+    pub json: bool,
 }
 
 #[derive(Args, Debug)]

@@ -12,6 +12,7 @@ fn main() -> Result<()> {
         Command::Capture(args) => fedramp_aion::run_capture(args),
         Command::Keygen(args) => fedramp_aion::run_keygen(args),
         Command::Secret(args) => fedramp_aion::run_secret(args),
+        Command::Obligations(args) => fedramp_aion::run_obligations(args),
     }?;
     if code != 0 {
         std::process::exit(code);

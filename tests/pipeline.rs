@@ -108,6 +108,7 @@ impl Drop for Workspace {
 fn rules(version: &str, force: &str) -> Value {
     json!({
         "info": {"version": version, "last_updated": "2026-07-14"},
+        "CPO": {"info": {"subsets": {}}},
         "FRD": {"data": {"all": {"FRD-ACV": {"term": "Accepted Vulnerability", "definition": "d"}}}},
         "FRR": {"VDR": {
             "info": {"name": "Vulnerability Detection and Response", "status": "stable"},
@@ -381,6 +382,60 @@ fn revealing_a_key_the_registry_does_not_pin_is_refused() {
     .unwrap_err()
     .to_string();
     assert!(error.contains("does not match any epoch"), "{error}");
+}
+
+/// A rule change must report who it lands on, not merely that it happened.
+#[test]
+fn a_rule_change_reports_the_affected_profiles() {
+    let workspace = Workspace::new("obligations");
+    workspace.publish(
+        &rules("2026.07.14.01", "SHOULD"),
+        &schemas(),
+        &marketplace("2026-07-23T06:27:00Z", 313, "Authorized"),
+    );
+    workspace.run_sync();
+
+    workspace.publish(
+        &rules("2026.08.01.01", "MUST"),
+        &schemas(),
+        &marketplace("2026-07-24T06:27:00Z", 313, "Authorized"),
+    );
+    workspace.run_sync();
+
+    let report = std::fs::read_to_string(workspace.path("CHANGES.md")).unwrap();
+    assert!(report.contains("## Who this affects"), "{report}");
+    // The SHOULD -> MUST must surface as a binding shift on a real profile row,
+    // not merely as a header.
+    let row = report
+        .lines()
+        .find(|l| l.starts_with("| Providers, class B, type Rev5 |"))
+        .unwrap_or_else(|| panic!("no provider row in:\n{report}"));
+    assert!(
+        row.ends_with("| 1 |"),
+        "expected one binding shift, got: {row}"
+    );
+}
+
+/// Marketplace-only churn must not produce an obligation section at all.
+#[test]
+fn marketplace_churn_reports_no_obligation_impact() {
+    let workspace = Workspace::new("obligations-quiet");
+    workspace.publish(
+        &rules("2026.07.14.01", "SHOULD"),
+        &schemas(),
+        &marketplace("2026-07-23T06:27:00Z", 313, "Authorized"),
+    );
+    workspace.run_sync();
+
+    workspace.publish(
+        &rules("2026.07.14.01", "SHOULD"),
+        &schemas(),
+        &marketplace("2026-07-24T06:27:00Z", 314, "Authorized"),
+    );
+    workspace.run_sync();
+
+    let report = std::fs::read_to_string(workspace.path("CHANGES.md")).unwrap();
+    assert!(!report.contains("## Who this affects"), "{report}");
 }
 
 /// CI has no keyring and cannot decrypt a copied key file, so it signs from a

@@ -19,6 +19,10 @@ pub struct Plan {
     pub deltas: Vec<Delta>,
     #[serde(skip)]
     pub bundle: Bundle,
+    /// The previous ruleset, kept so the report can answer "who does this
+    /// change affect" rather than only "what changed".
+    #[serde(skip)]
+    pub previous_rules: Option<serde_json::Value>,
 }
 
 impl Plan {
@@ -72,8 +76,10 @@ pub fn compare(snapshots: &[Snapshot], previous: Option<&Bundle>) -> Plan {
         .max()
         .unwrap_or(Severity::None);
 
+    let previous_rules = previous.and_then(|b| b.section(RULES).cloned());
     Plan {
         genesis,
+        previous_rules,
         changed: genesis || deltas.iter().any(|d| d.changed),
         severity: if genesis { Severity::Major } else { severity },
         upstream_version: bundle.upstream_version.clone(),
