@@ -85,12 +85,22 @@ jobs:
             echo
             echo "\`registry.json\` pins the public key; no private material is published."
           } > notes.md
+          # Glob rather than list: a hardcoded set silently omits any source
+          # added later, which is exactly how chain-v2 shipped without
+          # oscal.json and kev.json.
           gh release create "$TAG" \
             --title "FedRAMP chain v$VERSION — rules $UPSTREAM" \
             --notes-file notes.md \
             fedramp.aion \
             registry.json \
-            data/rules.json \
-            data/schemas.json \
-            data/marketplace.json \
-            data/provenance.json
+            data/*.json
+
+          # A release that quietly ships fewer snapshots than the chain signed
+          # is worse than a failed one, so assert the count.
+          expected=$(( 2 + $(ls data/*.json | wc -l) ))
+          uploaded=$(gh release view "$TAG" --json assets --jq '.assets | length')
+          if [ "$uploaded" -ne "$expected" ]; then
+            echo "::error::release $TAG carries $uploaded assets, expected $expected"
+            exit 1
+          fi
+          echo "$TAG published with $uploaded assets"
