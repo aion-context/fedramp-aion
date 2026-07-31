@@ -9,6 +9,16 @@
     "content_sha256": "a9a5eb19d7f600de46c4b4e7c2d9cf512deff2c1f6a9e6fd7ceece73f26aa2de",
     "substance_sha256": "a69088fe9eb0c025f13fcaba1045261993735c3a1f53ee51feb24782883592d1"
   },
+  "oscal": {
+    "repo": "usnistgov/oscal-content",
+    "path": "nist.gov/SP800-53/rev5/json/NIST_SP-800-53_rev5_catalog-min.json",
+    "commit": "78650f02ad9321bb7b817846f8fbd4f2bcd620de",
+    "committed_at": "2026-05-13T05:13:20Z",
+    "raw_sha256": "d820835aa54aeb2265bdacdf8e678af7530443a59556563df898addf012024cb",
+    "bytes": 4906119,
+    "content_sha256": "32ca62d191be4c5ddb66b6d2905eedc546dcf7a0dadf201e5e5060a9040750d6",
+    "substance_sha256": "7dafbbc53dfc29471398257a068f4abefd4ee92d43bf6f231d78c4e199784d26"
+  },
   "rules": {
     "repo": "FedRAMP/rules",
     "path": "fedramp-consolidated-rules.json",
