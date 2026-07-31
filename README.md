@@ -134,6 +134,54 @@ translating the diff into per-profile obligation deltas. Replaying the real
 Class A Rev5 is the only profile that lost an obligation, and agencies lost
 four — matching FedRAMP's own commit messages for that day.
 
+## Receipts
+
+The chain says what FedRAMP required. A receipt says what *you* did about it,
+signed by you, against that exact version.
+
+```sh
+# the operator is a distinct author, appended to the same registry
+fedramp-aion keygen --key 2 --author 2 --keystore .keys --registry registry.json --append
+
+fedramp-aion receipt --operator 2 --key 2 --keystore .keys \
+  --role Providers --class B --type Rev5 \
+  --obligation CCM-OCR-AVL \
+  --action "Submitted the Q3 ongoing certification report to the agency" \
+  --decision satisfied --evidence q3-report.json
+
+fedramp-aion receipt-verify receipt.json     # exit 0 valid, 1 invalid
+```
+
+A DSSE envelope over an in-toto statement — the format the surrounding
+ecosystem already verifies — plus a plaintext claim whose every field is
+digest-committed inside the envelope.
+
+Verification is four independent checks:
+
+| check | what it proves |
+|---|---|
+| signature by the operator | the operator's own registry-pinned key signed it, not the feed's |
+| claim bound to signature | no field was edited after sealing |
+| cites this chain | the receipt names this chain, version, and bundle digest |
+| obligations match the signed rules | the operator did not misstate what binds them |
+
+That last one is the point: `CCM-OCR-AVL / MUST` in a receipt is checked
+against what the signed ruleset actually says for that profile, so an operator
+cannot quietly downgrade their own obligation.
+
+**Evidence never enters a receipt** — only its BLAKE3 digest, the filename, and
+the size. That keeps CUI out of an artifact meant to be forwarded to an agency.
+
+Attacks the format rejects, each covered by a test: editing the action text,
+downgrading a cited `MUST` to `SHOULD`, swapping an evidence digest,
+reattributing a receipt to another author, and signing with a key the registry
+does not pin. Citing a rule that does not apply to the profile is refused at
+issue time rather than at verification.
+
+> Receipts are signed by the **operator**, never the feed. `receipt` refuses
+> when `--operator` equals the feed author: a receipt the feed signed about
+> itself attests to nothing.
+
 ## Running as an action
 
 `.github/workflows/watch.yml` runs daily at 07:30 UTC (an hour after upstream's
@@ -183,7 +231,7 @@ for required checks instead of merging immediately.
 ## Tests
 
 ```sh
-cargo test          # 68 tests, no network
+cargo test          # 75 tests, no network
 cargo clippy --all-targets
 ```
 

@@ -190,7 +190,27 @@ build → sync → verify → branch + PR → close superseded PRs → auto-merg
 suite, and `fedramp-aion verify` against the committed chain on every PR and
 push to `main`.
 
-## 9. Still open
+## 9. Receipts
+
+A receipt binds an action to the obligations in force when it was taken: a DSSE
+envelope over an in-toto statement, signed by the **operator's** own
+registry-pinned key rather than the feed's. Verification recomputes every claim
+digest, then re-derives the operator's obligations from the signed rules and
+compares them with what the receipt cites — so a receipt cannot overstate or
+downgrade what binds its issuer.
+
+Evidence is committed by BLAKE3 digest only. Content never enters the artifact,
+because receipts are designed to be forwarded and packages contain CUI.
+
+**Precision trap, found the hard way:** JCS canonicalization serializes numbers
+with ECMAScript semantics, so any integer above 2^53 silently rounds. The
+chain's `file_id` is a random u64 and was being written to the signed payload as
+`6675964335526257000` instead of `6675964335526256880`. Large integers are now
+carried as strings. No upstream source currently contains an integer over 2^53
+— verified across all three — but a future one would corrupt the bundle the same
+way.
+
+## 10. Still open
 
 - Rev5 OSCAL baselines have no live home since `GSA/fedramp-automation` began
   404ing. If FedRAMP republishes them, they become a fourth source.

@@ -8,14 +8,18 @@ pub mod cli;
 pub mod diff;
 pub mod obligations;
 pub mod plan;
+pub mod receipt;
 pub mod report;
 pub mod severity;
 pub mod sources;
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use std::path::Path;
 
-use crate::cli::{CaptureArgs, KeygenArgs, ObligationArgs, PlanArgs, SyncArgs, VerifyArgs};
+use crate::cli::{
+    CaptureArgs, KeygenArgs, ObligationArgs, PlanArgs, ReceiptArgs, ReceiptVerifyArgs, SyncArgs,
+    VerifyArgs,
+};
 use crate::plan::Plan;
 use crate::sources::Fetcher;
 
@@ -135,7 +139,7 @@ pub fn run_verify(args: &VerifyArgs) -> Result<i32> {
 }
 
 pub fn run_keygen(args: &KeygenArgs) -> Result<i32> {
-    if args.registry.exists() {
+    if args.registry.exists() && !args.append {
         bail!(
             "{} already exists — refusing to overwrite a registry in use",
             args.registry.display()
@@ -218,6 +222,117 @@ pub fn run_obligations(args: &ObligationArgs) -> Result<i32> {
     }
     emit(&report::obligations_markdown(&profile, &selected))?;
     Ok(0)
+}
+
+/// Signs with the operator's own key so the receipt is attributable to them,
+/// not to the feed.
+pub fn run_receipt(args: &ReceiptArgs) -> Result<i32> {
+    anyhow::ensure!(
+        args.operator != args.feed_author,
+        "operator {} must differ from the feed author — a receipt signed by the \
+         feed attests to nothing",
+        args.operator
+    );
+
+    let bundle = chain::previous_bundle(&args.chain)?
+        .ok_or_else(|| anyhow::anyhow!("no chain at {}", args.chain.display()))?;
+    let registry = chain::load_registry(&args.registry)?;
+    let report = chain::verify(&args.chain, &registry)?;
+    anyhow::ensure!(
+        report.is_valid,
+        "refusing to issue a receipt against an invalid chain"
+    );
+
+    let rules = bundle
+        .section(sources::RULES)
+        .ok_or_else(|| anyhow::anyhow!("chain payload has no rules section"))?;
+    let profile = obligations::Profile {
+        role: args.role.clone(),
+        class: args.class.clone(),
+        cert_type: args.cert_type.clone(),
+        path: args.path.clone(),
+    };
+    let mut selected = obligations::select(rules, &profile);
+    if !args.obligations.is_empty() {
+        let wanted: std::collections::BTreeSet<&str> =
+            args.obligations.iter().map(String::as_str).collect();
+        let found: Vec<String> = selected.iter().map(|o| o.id.clone()).collect();
+        for id in &wanted {
+            anyhow::ensure!(
+                found.iter().any(|f| f == id),
+                "{id} is not an obligation for {} — a receipt cannot cite a rule \
+                 that does not apply",
+                profile.label()
+            );
+        }
+        selected.retain(|o| wanted.contains(o.id.as_str()));
+    }
+
+    let evidence: Vec<receipt::EvidenceRef> = args
+        .evidence
+        .iter()
+        .map(|p| receipt::evidence_ref(p))
+        .collect::<Result<_>>()?;
+
+    let signer = chain::Signer {
+        author: args.operator,
+        key: args.key,
+        keystore_dir: args.keystore.clone(),
+        secret_hex: args.signing_key.clone(),
+    };
+    let sealed = receipt::create(
+        &receipt::Inputs {
+            action: &args.action,
+            decision: receipt::parse_decision(&args.decision)?,
+            operator: args.operator,
+            receipt_version: args.receipt_version,
+            profile: &profile,
+            obligations: &selected,
+            evidence: &evidence,
+            bundle: &bundle,
+            file_id: report.file_id.0,
+            chain_version: report.version_count,
+        },
+        &signer.load_key()?,
+        args.feed_author,
+    )?;
+
+    std::fs::write(&args.out, serde_json::to_vec_pretty(&sealed)?)?;
+    println!(
+        "receipt written to {} — {} obligation(s), chain v{}, operator {}",
+        args.out.display(),
+        sealed.claim.obligations.len(),
+        sealed.claim.rules.chain_version,
+        args.operator
+    );
+    Ok(0)
+}
+
+pub fn run_receipt_verify(args: &ReceiptVerifyArgs) -> Result<i32> {
+    let sealed: receipt::Receipt = serde_json::from_slice(&std::fs::read(&args.receipt)?)
+        .with_context(|| format!("reading {}", args.receipt.display()))?;
+    let registry = chain::load_registry(&args.registry)?;
+
+    let chain_context = if args.no_chain {
+        None
+    } else {
+        let bundle = chain::previous_bundle(&args.chain)?
+            .ok_or_else(|| anyhow::anyhow!("no chain at {}", args.chain.display()))?;
+        let report = chain::verify(&args.chain, &registry)?;
+        Some((bundle, report.file_id.0, report.version_count))
+    };
+    let verdict = receipt::verify(
+        &sealed,
+        &registry,
+        chain_context.as_ref().map(|(b, f, v)| (b, *f, *v)),
+    )?;
+
+    if args.json {
+        emit(&format!("{}\n", serde_json::to_string_pretty(&verdict)?))?;
+    } else {
+        emit(&receipt::verdict_markdown(&sealed, &verdict))?;
+    }
+    Ok(i32::from(!verdict.is_valid()))
 }
 
 pub fn run_capture(args: &CaptureArgs) -> Result<i32> {

@@ -438,6 +438,130 @@ fn marketplace_churn_reports_no_obligation_impact() {
     assert!(!report.contains("## Who this affects"), "{report}");
 }
 
+// ---- receipts -------------------------------------------------------------
+
+fn issue_receipt(
+    workspace: &Workspace,
+    operator: u64,
+    action: &str,
+) -> fedramp_aion::receipt::Receipt {
+    let bundle = fedramp_aion::chain::previous_bundle(&workspace.path("fedramp.aion"))
+        .unwrap()
+        .unwrap();
+    let registry = fedramp_aion::chain::load_registry(&workspace.path("registry.json")).unwrap();
+    let report = fedramp_aion::chain::verify(&workspace.path("fedramp.aion"), &registry).unwrap();
+    let profile = fedramp_aion::obligations::Profile {
+        role: "Providers".into(),
+        class: Some("B".into()),
+        cert_type: Some("Rev5".into()),
+        path: None,
+    };
+    let rules = bundle.section("rules").unwrap().clone();
+    let selected = fedramp_aion::obligations::select(&rules, &profile);
+    let signer = fedramp_aion::chain::Signer {
+        author: operator,
+        key: operator,
+        keystore_dir: Some(workspace.path("keys")),
+        secret_hex: None,
+    };
+    fedramp_aion::receipt::create(
+        &fedramp_aion::receipt::Inputs {
+            action,
+            decision: fedramp_aion::receipt::Decision::Satisfied,
+            operator,
+            receipt_version: 1,
+            profile: &profile,
+            obligations: &selected,
+            evidence: &[],
+            bundle: &bundle,
+            file_id: report.file_id.0,
+            chain_version: report.version_count,
+        },
+        &signer.load_key().unwrap(),
+        42,
+    )
+    .unwrap()
+}
+
+fn seeded_workspace(name: &str) -> Workspace {
+    let workspace = Workspace::new(name);
+    workspace.publish(
+        &rules("2026.07.14.01", "SHOULD"),
+        &schemas(),
+        &marketplace("2026-07-23T06:27:00Z", 313, "Authorized"),
+    );
+    workspace.run_sync();
+    workspace
+}
+
+#[test]
+fn a_receipt_binds_an_action_to_the_signed_rules() {
+    let workspace = seeded_workspace("receipt-ok");
+    fedramp_aion::chain::keygen(
+        7,
+        7,
+        Some(&workspace.path("keys")),
+        &workspace.path("registry.json"),
+    )
+    .unwrap();
+
+    let receipt = issue_receipt(&workspace, 7, "Filed the quarterly report");
+    let registry = fedramp_aion::chain::load_registry(&workspace.path("registry.json")).unwrap();
+    let bundle = fedramp_aion::chain::previous_bundle(&workspace.path("fedramp.aion"))
+        .unwrap()
+        .unwrap();
+    let report = fedramp_aion::chain::verify(&workspace.path("fedramp.aion"), &registry).unwrap();
+
+    let verdict = fedramp_aion::receipt::verify(
+        &receipt,
+        &registry,
+        Some((&bundle, report.file_id.0, report.version_count)),
+    )
+    .unwrap();
+    assert!(verdict.is_valid(), "{:?}", verdict.problems);
+    assert!(verdict.signature_valid && verdict.claim_bound);
+    assert_eq!(verdict.matches_chain, Some(true));
+    assert_eq!(verdict.obligations_reproduced, Some(true));
+}
+
+#[test]
+fn editing_the_claim_invalidates_the_receipt() {
+    let workspace = seeded_workspace("receipt-tamper");
+    fedramp_aion::chain::keygen(
+        7,
+        7,
+        Some(&workspace.path("keys")),
+        &workspace.path("registry.json"),
+    )
+    .unwrap();
+    let mut receipt = issue_receipt(&workspace, 7, "Filed the quarterly report");
+    receipt.claim.action = "Filed something else entirely".into();
+
+    let registry = fedramp_aion::chain::load_registry(&workspace.path("registry.json")).unwrap();
+    let verdict = fedramp_aion::receipt::verify(&receipt, &registry, None).unwrap();
+    assert!(!verdict.is_valid());
+    assert!(!verdict.claim_bound);
+}
+
+/// A receipt signed by a key the registry does not pin proves nothing.
+#[test]
+fn an_unregistered_operator_is_rejected() {
+    let workspace = seeded_workspace("receipt-unregistered");
+    fedramp_aion::chain::keygen(
+        9,
+        9,
+        Some(&workspace.path("keys")),
+        &workspace.path("stray-registry.json"),
+    )
+    .unwrap();
+    let receipt = issue_receipt(&workspace, 9, "Signed by a stranger");
+
+    let registry = fedramp_aion::chain::load_registry(&workspace.path("registry.json")).unwrap();
+    let verdict = fedramp_aion::receipt::verify(&receipt, &registry, None).unwrap();
+    assert!(!verdict.signature_valid);
+    assert!(!verdict.is_valid());
+}
+
 /// CI has no keyring and cannot decrypt a copied key file, so it signs from a
 /// seed held in a secret. That path must satisfy the same registry.
 #[test]

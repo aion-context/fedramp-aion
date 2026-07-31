@@ -13,6 +13,8 @@ fn main() -> Result<()> {
         Command::Keygen(args) => fedramp_aion::run_keygen(args),
         Command::Secret(args) => fedramp_aion::run_secret(args),
         Command::Obligations(args) => fedramp_aion::run_obligations(args),
+        Command::Receipt(args) => fedramp_aion::run_receipt(args),
+        Command::ReceiptVerify(args) => fedramp_aion::run_receipt_verify(args),
     }?;
     if code != 0 {
         std::process::exit(code);

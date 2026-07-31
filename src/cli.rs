@@ -31,6 +31,77 @@ pub enum Command {
     Secret(SecretArgs),
     /// List the obligations that apply to a given profile.
     Obligations(ObligationArgs),
+    /// Sign a receipt binding an action to the obligations in force.
+    Receipt(ReceiptArgs),
+    /// Verify a receipt: signature, claim binding, and the cited rules.
+    ReceiptVerify(ReceiptVerifyArgs),
+}
+
+#[derive(Args, Debug)]
+pub struct ReceiptArgs {
+    /// What was done, in the operator's own words.
+    #[arg(long)]
+    pub action: String,
+    /// satisfied, not-satisfied, compensating, unevaluated.
+    #[arg(long, default_value = "satisfied")]
+    pub decision: String,
+    /// Operator author id — must differ from the feed author.
+    #[arg(long)]
+    pub operator: u64,
+    /// Keystore key id the operator signs with.
+    #[arg(long)]
+    pub key: u64,
+    /// Monotonic counter per operator, for replay defence.
+    #[arg(long, default_value_t = 1)]
+    pub receipt_version: u64,
+    /// Rule ids this receipt covers. Repeatable; defaults to the whole profile.
+    #[arg(long = "obligation", value_name = "ID")]
+    pub obligations: Vec<String>,
+    /// Files to commit by digest. Contents are never read into the receipt.
+    #[arg(long = "evidence", value_name = "FILE")]
+    pub evidence: Vec<PathBuf>,
+    #[arg(long, default_value = "Providers")]
+    pub role: String,
+    #[arg(long)]
+    pub class: Option<String>,
+    #[arg(long = "type", value_name = "TYPE")]
+    pub cert_type: Option<String>,
+    #[arg(long)]
+    pub path: Option<String>,
+    /// Author id of the feed that signed the chain.
+    #[arg(long, default_value_t = 1)]
+    pub feed_author: u64,
+    #[arg(long, default_value = "fedramp.aion")]
+    pub chain: PathBuf,
+    #[arg(long, default_value = "registry.json")]
+    pub registry: PathBuf,
+    #[arg(long, env = "AION_KEYSTORE_DIR", value_name = "DIR")]
+    pub keystore: Option<PathBuf>,
+    /// Hex Ed25519 seed, in place of a keystore.
+    #[arg(
+        long,
+        env = "AION_OPERATOR_KEY",
+        hide_env_values = true,
+        value_name = "HEX"
+    )]
+    pub signing_key: Option<String>,
+    #[arg(long, short, default_value = "receipt.json")]
+    pub out: PathBuf,
+}
+
+#[derive(Args, Debug)]
+pub struct ReceiptVerifyArgs {
+    pub receipt: PathBuf,
+    #[arg(long, default_value = "registry.json")]
+    pub registry: PathBuf,
+    /// Chain to cross-check the cited rules against.
+    #[arg(long, default_value = "fedramp.aion")]
+    pub chain: PathBuf,
+    /// Verify the signature and claim binding only.
+    #[arg(long)]
+    pub no_chain: bool,
+    #[arg(long)]
+    pub json: bool,
 }
 
 #[derive(Args, Debug)]
@@ -94,6 +165,9 @@ pub struct KeygenArgs {
     /// Print the seed once so it can be stored as a CI secret.
     #[arg(long)]
     pub print_secret: bool,
+    /// Add this author to an existing registry instead of refusing.
+    #[arg(long)]
+    pub append: bool,
 }
 
 #[derive(Args, Debug)]

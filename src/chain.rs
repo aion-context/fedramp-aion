@@ -34,6 +34,10 @@ impl Signer {
         }
     }
 
+    pub fn load_key(&self) -> Result<SigningKey> {
+        self.load()
+    }
+
     fn load(&self) -> Result<SigningKey> {
         if let Some(secret) = &self.secret_hex {
             let bytes = crate::canon::from_hex(secret.trim())
@@ -112,7 +116,11 @@ pub fn keygen(
         .generate_keypair(AuthorId::new(key))
         .map_err(|e| anyhow::anyhow!("generating key {key}: {e}"))?;
 
-    let mut registry = KeyRegistry::new();
+    let mut registry = if registry_path.exists() {
+        load_registry(registry_path)?
+    } else {
+        KeyRegistry::new()
+    };
     registry
         .register_author(AuthorId::new(author), verifying, verifying, 1)
         .map_err(|e| anyhow::anyhow!("registering author {author}: {e}"))?;
