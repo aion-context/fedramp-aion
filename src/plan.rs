@@ -51,28 +51,53 @@ impl Plan {
         )
     }
 
-    /// With four sources, `major` alone no longer says what moved — a headline
-    /// reading "RULES CHANGED" when NIST republished 800-53 would be a lie.
+    /// With five sources, `major` alone no longer says what moved — a headline
+    /// reading "RULES CHANGED" when NIST republished 800-53 would be a lie, and
+    /// so would "CHANGED" for a source that was merely added to the bundle.
     fn headline_subject(&self, moved: &[&str]) -> String {
         if self.severity < Severity::Major {
             return self.severity.headline().to_string();
         }
-        let major_sources: Vec<&str> = self
+        fn label(source: &str) -> &str {
+            match source {
+                RULES => "RULES",
+                SCHEMAS => "SUBMISSION SCHEMAS",
+                OSCAL => "800-53",
+                KEV => "KEV",
+                MARKETPLACE => "MARKETPLACE",
+                other => other,
+            }
+        }
+        let major: Vec<&Delta> = self
             .deltas
             .iter()
             .filter(|d| d.changed && d.severity == Severity::Major)
-            .map(|d| match d.source.as_str() {
-                RULES => "RULES CHANGED",
-                SCHEMAS => "SUBMISSION SCHEMAS CHANGED",
-                OSCAL => "800-53 CHANGED",
-                other => other,
-            })
             .collect();
-        if major_sources.is_empty() {
+        if major.is_empty() {
             let _ = moved;
             return self.severity.headline().to_string();
         }
-        major_sources.join(" + ")
+
+        let (added, changed): (Vec<&Delta>, Vec<&Delta>) = major.iter().partition(|d| {
+            d.drift
+                .iter()
+                .any(|note| note.contains("added to the bundle"))
+        });
+        let mut parts = Vec::new();
+        if !added.is_empty() {
+            parts.push(format!(
+                "SOURCE ADDED: {}",
+                added
+                    .iter()
+                    .map(|d| label(&d.source))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+        }
+        for delta in changed {
+            parts.push(format!("{} CHANGED", label(&delta.source)));
+        }
+        parts.join(" + ")
     }
 }
 
@@ -314,6 +339,25 @@ mod tests {
         assert_eq!(plan.delta(RULES).unwrap().severity, Severity::Major);
         assert_eq!(plan.delta(MARKETPLACE).unwrap().severity, Severity::Routine);
         assert!(plan.headline().contains("RULES CHANGED"));
+    }
+
+    /// A source that was added must not be announced as one that changed.
+    #[test]
+    fn the_headline_distinguishes_added_from_changed() {
+        let three = vec![
+            snapshot(RULES, rules("v1", "SHOULD")),
+            snapshot(SCHEMAS, schemas()),
+            snapshot(MARKETPLACE, market(313)),
+        ];
+        let before = compare(&three, None);
+        let plan = compare(&all("v1", "SHOULD", 313), Some(&before.bundle));
+        let headline = plan.headline();
+        assert!(headline.contains("SOURCE ADDED"), "{headline}");
+        assert!(
+            headline.contains("800-53") && headline.contains("KEV"),
+            "{headline}"
+        );
+        assert!(!headline.contains("CHANGED"), "{headline}");
     }
 
     /// Adding a source to an existing chain reports a summary, not a dump.
