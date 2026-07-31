@@ -40,6 +40,7 @@ impl Workspace {
             ("rules", rules),
             ("schemas", schemas),
             ("marketplace", marketplace),
+            ("oscal", &oscal()),
         ] {
             std::fs::write(
                 self.path(&format!("upstream/{name}.json")),
@@ -125,6 +126,16 @@ fn schemas() -> Value {
         "type": "object",
         "required": ["incident_id"],
         "properties": {"incident_id": {"type": "string"}}}})
+}
+
+/// A minimal 800-53 catalog carrying the control the fixture rules reference.
+fn oscal() -> Value {
+    json!({"catalog": {
+        "uuid": "11111111-1111-1111-1111-111111111111",
+        "metadata": {"version": "5.2.0", "last-modified": "2026-05-11T16:01:09.00000-00:00",
+                     "oscal-version": "1.2.2"},
+        "groups": [{"id": "cp", "title": "Contingency Planning", "controls": [
+            {"id": "cp-3", "title": "Contingency Training"}]}]}})
 }
 
 fn marketplace(last_change: &str, reuse: i64, status: &str) -> Value {

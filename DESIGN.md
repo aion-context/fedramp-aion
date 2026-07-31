@@ -11,13 +11,16 @@ below is settled and the test suite covers it.
 FedRAMP publishes structured data only through GitHub raw; there is no REST API
 on `fedramp.gov` (`marketplace.fedramp.gov/api/v1/products.json`,
 `fedramp.gov/data.json` both 404). `GSA/fedramp-automation` — the historical
-home of the Rev5 OSCAL baselines — now 404s entirely, so OSCAL is not a source.
+home of the Rev5 OSCAL baselines — now 404s entirely, but **the content is
+published by NIST directly** at `usnistgov/oscal-content`, which is where the
+`oscal` source is pinned from.
 
 | id | repo | path | shape |
 |---|---|---|---|
 | `rules` | `FedRAMP/rules` | `fedramp-consolidated-rules.json` | 567 KB; `info` + `FRD`/`FRR`/`KSI`/`CTL` |
 | `schemas` | `FedRAMP/schemas` | `*.json` (dir) | 11 CR26 package JSON Schemas |
 | `marketplace` | `FedRAMP/marketplace-fedramp-gov-data` | `data.json` | 4.4 MB; `meta` + 7 collections |
+| `oscal` | `usnistgov/oscal-content` | `nist.gov/SP800-53/rev5/json/…catalog-min.json` | 4.9 MB; 1,196 controls in 20 groups |
 
 Neither repo tags releases, so `main` is not a stable reference. Every run
 resolves `main` → **commit SHA for that path**, then fetches the raw bytes at
@@ -64,6 +67,7 @@ resolve → fetch → canonicalize → project → digest → compare → diff �
    | `rules` | `info.last_updated` | pure timestamp; `info.version` is kept — it is a real identifier |
    | `schemas` | — | identity |
    | `marketplace` | `meta` | `meta.last_change` moves daily with no content change |
+   | `oscal` | `catalog.uuid`, `metadata.last-modified`, `metadata.oscal-version` | measured: all three moved between the 2025-08-27 and 2026-05-13 publishes while the control text was byte-identical. `metadata.version` (5.2.0) is kept — it is the real revision |
 
 5. **digest** — `content_sha256` over the whole canonical doc,
    `substance_sha256` over the projection. The gate reads `substance_sha256`.
@@ -124,14 +128,18 @@ Product field changes are split into two buckets:
 
 | severity | trigger |
 |---|---|
-| `major` | any `rules` leaf added/removed/modified, or any `schemas` change |
+| `major` | any `rules` leaf added/removed/modified, any `schemas` change, or an 800-53 control **that FedRAMP references** |
 | `minor` | marketplace product add/remove or a **material** field change |
-| `routine` | marketplace **counter**-only movement, mapping rows |
+| `routine` | marketplace **counter**-only movement, mapping rows, or an 800-53 control FedRAMP does not reference |
 | `metadata` | only `info.*` moved in rules |
 | `none` | nothing moved — no commit |
 
-The PR title leads with the highest severity, so a rules change is never buried
-under a week of marketplace counter churn.
+The PR title leads with the highest severity **and names the source that moved**
+— with four sources, `major` alone would not distinguish a FedRAMP rules change
+from a NIST republish.
+
+A source absent from the previous payload is summarised (`oscal added to the
+bundle; 1,196 controls`) rather than listed as 1,196 additions.
 
 ## 6. Determinism invariants
 

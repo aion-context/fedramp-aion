@@ -39,6 +39,18 @@ pub enum Command {
     Mcp(McpArgs),
     /// Validate a submission package against the signed schemas.
     Validate(ValidateArgs),
+    /// Show a NIST 800-53 control and any FedRAMP overlay for it.
+    Control(ControlArgs),
+}
+
+#[derive(Args, Debug)]
+pub struct ControlArgs {
+    /// Control id in either form: AC-06-01 or ac-6.1.
+    pub id: String,
+    #[arg(long, default_value = "fedramp.aion")]
+    pub chain: PathBuf,
+    #[arg(long)]
+    pub json: bool,
 }
 
 #[derive(Args, Debug)]

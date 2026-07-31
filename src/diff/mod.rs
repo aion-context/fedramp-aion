@@ -2,6 +2,7 @@
 //! marketplace file every day and reformats the rules file at will.
 
 pub mod marketplace;
+pub mod oscal;
 pub mod rules;
 pub mod schemas;
 

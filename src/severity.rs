@@ -35,7 +35,7 @@ impl Severity {
         match self {
             Self::None => "no change",
             Self::Metadata => "metadata only",
-            Self::Routine => "routine marketplace movement",
+            Self::Routine => "routine movement",
             Self::Minor => "marketplace authorization activity",
             Self::Major => "RULES CHANGED",
         }

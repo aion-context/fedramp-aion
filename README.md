@@ -14,10 +14,27 @@ require on date X, and who says so?**
 | `rules` | [`FedRAMP/rules`](https://github.com/FedRAMP/rules) | CR26 consolidated rules — 75 definitions, 328 rules, 46 KSIs, 79 control overlays |
 | `schemas` | [`FedRAMP/schemas`](https://github.com/FedRAMP/schemas) | 11 machine-readable submission package schemas |
 | `marketplace` | [`FedRAMP/marketplace-fedramp-gov-data`](https://github.com/FedRAMP/marketplace-fedramp-gov-data) | 670 products, 244 agencies, 50 assessors, authorization/reuse mappings |
+| `oscal` | [`usnistgov/oscal-content`](https://github.com/usnistgov/oscal-content) | NIST SP 800-53 rev5 catalog — 1,196 controls, the text FedRAMP amends but never restates |
 
-There is no REST API on `fedramp.gov`, and `GSA/fedramp-automation` (the old
-OSCAL baselines) now 404s. GitHub raw is the only distribution channel, so every
-run pins `main` to a commit SHA before fetching.
+There is no REST API on `fedramp.gov`. `GSA/fedramp-automation` — the old home
+of the OSCAL baselines — now 404s, but the content lives at NIST itself, which
+is where `oscal` is pinned from. GitHub raw is the only distribution channel, so
+every run pins `main` to a commit SHA before fetching.
+
+FedRAMP references **284 distinct 800-53 controls** (79 `CTL` overlays, 209 KSI
+references) without ever carrying their text. `fedramp-aion control AC-20`
+returns NIST's control and FedRAMP's overlay from one signed payload:
+
+```
+# ac-20 — Use of External Systems
+FedRAMP references this control.
+
+External systems are systems that are used by but not part of organizational
+systems, and for which the organization has no direct control over …
+```
+
+Ids normalise across both conventions — FedRAMP writes `AC-06-01`, OSCAL writes
+`ac-6.1`.
 
 ## Status
 
@@ -75,6 +92,15 @@ Byte comparison is useless here: the marketplace file is rewritten every day at
 
 Measured against 8 real consecutive marketplace days: 7 upstream rewrites, **5
 commits**, 2 correctly suppressed.
+
+The same trap sits in NIST's publishes. Between 2025-08-27 and 2026-05-13 the
+catalog's `uuid`, `last-modified`, and `oscal-version` all changed while the
+control text was **byte-identical** — a naive gate would have announced an
+800-53 change on a publish that changed nothing. All three are stripped.
+
+800-53 severity is relative to FedRAMP: a changed control the ruleset
+references is `major`, one it ignores is `routine`. Otherwise a single NIST
+revision (1,196 controls) would bury a rules change.
 
 Severity ranks what moved so a rule change is never buried:
 
@@ -250,6 +276,7 @@ Four tools, each returning its citation alongside the answer:
 | `fedramp_obligations` | the rules applying to a profile, class variant resolved |
 | `fedramp_rule` | one rule by FedRAMP id, e.g. `CPO-CSF-CPM` |
 | `fedramp_search` | full-text across the ruleset, returning ids to cite |
+| `fedramp_control` | the 800-53 control text behind a reference, plus FedRAMP's overlay |
 
 Every result carries `provenance`:
 
@@ -318,7 +345,7 @@ for required checks instead of merging immediately.
 ## Tests
 
 ```sh
-cargo test          # 92 tests, no network
+cargo test          # 101 tests, no network
 cargo clippy --all-targets
 ```
 

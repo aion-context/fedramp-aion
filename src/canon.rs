@@ -73,6 +73,13 @@ pub fn without(value: &Value, path: &[&str]) -> Value {
     projected
 }
 
+/// Strip several paths at once, for sources that churn in more than one place.
+pub fn without_all(value: &Value, paths: &[&[&str]]) -> Value {
+    paths
+        .iter()
+        .fold(value.clone(), |acc, path| without(&acc, path))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -106,6 +113,30 @@ mod tests {
     fn without_is_a_noop_when_path_is_absent() {
         let value = json!({"info": {"version": "1"}});
         assert_eq!(without(&value, &["meta", "last_change"]), value);
+    }
+
+    #[test]
+    fn without_all_strips_every_listed_path() {
+        let value = json!({"catalog": {
+            "uuid": "abc", "metadata": {"last-modified": "t", "oscal-version": "1.1.3", "version": "5.2.0"},
+            "groups": [1, 2]}});
+        let projected = without_all(
+            &value,
+            &[
+                &["catalog", "uuid"],
+                &["catalog", "metadata", "last-modified"],
+                &["catalog", "metadata", "oscal-version"],
+            ],
+        );
+        assert!(projected["catalog"].get("uuid").is_none());
+        assert!(projected["catalog"]["metadata"]
+            .get("last-modified")
+            .is_none());
+        assert!(projected["catalog"]["metadata"]
+            .get("oscal-version")
+            .is_none());
+        assert_eq!(projected["catalog"]["metadata"]["version"], json!("5.2.0"));
+        assert_eq!(projected["catalog"]["groups"], json!([1, 2]));
     }
 
     #[test]

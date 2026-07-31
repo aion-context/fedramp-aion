@@ -6,7 +6,7 @@ use serde::Serialize;
 use crate::bundle::Bundle;
 use crate::diff::{self, Delta};
 use crate::severity::Severity;
-use crate::sources::{self, Fetcher, Snapshot, MARKETPLACE, RULES, SCHEMAS};
+use crate::sources::{self, Fetcher, Snapshot, MARKETPLACE, OSCAL, RULES, SCHEMAS};
 
 #[derive(Debug, Serialize)]
 pub struct Plan {
@@ -45,10 +45,34 @@ impl Plan {
             .collect();
         format!(
             "{}: {} ({})",
-            self.severity.headline(),
+            self.headline_subject(&moved),
             self.upstream_version,
             moved.join(", ")
         )
+    }
+
+    /// With four sources, `major` alone no longer says what moved — a headline
+    /// reading "RULES CHANGED" when NIST republished 800-53 would be a lie.
+    fn headline_subject(&self, moved: &[&str]) -> String {
+        if self.severity < Severity::Major {
+            return self.severity.headline().to_string();
+        }
+        let major_sources: Vec<&str> = self
+            .deltas
+            .iter()
+            .filter(|d| d.changed && d.severity == Severity::Major)
+            .map(|d| match d.source.as_str() {
+                RULES => "RULES CHANGED",
+                SCHEMAS => "SUBMISSION SCHEMAS CHANGED",
+                OSCAL => "800-53 CHANGED",
+                other => other,
+            })
+            .collect();
+        if major_sources.is_empty() {
+            let _ = moved;
+            return self.severity.headline().to_string();
+        }
+        major_sources.join(" + ")
     }
 }
 
@@ -65,9 +89,16 @@ pub fn compare(snapshots: &[Snapshot], previous: Option<&Bundle>) -> Plan {
     let bundle = Bundle::from_snapshots(snapshots);
     let genesis = previous.is_none();
 
+    // OSCAL severity depends on which controls FedRAMP references, so the
+    // rules snapshot has to be in scope when its diff runs.
+    let referenced = snapshots
+        .iter()
+        .find(|s| s.id == RULES)
+        .map(|s| diff::oscal::referenced_controls(&s.content))
+        .unwrap_or_default();
     let deltas: Vec<Delta> = snapshots
         .iter()
-        .map(|snapshot| delta_for(snapshot, previous))
+        .map(|snapshot| delta_for(snapshot, previous, &referenced))
         .collect();
 
     let severity = deltas
@@ -90,7 +121,11 @@ pub fn compare(snapshots: &[Snapshot], previous: Option<&Bundle>) -> Plan {
     }
 }
 
-fn delta_for(snapshot: &Snapshot, previous: Option<&Bundle>) -> Delta {
+fn delta_for(
+    snapshot: &Snapshot,
+    previous: Option<&Bundle>,
+    referenced: &std::collections::BTreeSet<String>,
+) -> Delta {
     let Some(previous) = previous else {
         let mut delta = Delta::new(&snapshot.id);
         delta.changed = true;
@@ -99,8 +134,20 @@ fn delta_for(snapshot: &Snapshot, previous: Option<&Bundle>) -> Delta {
         return delta;
     };
 
-    let unchanged = previous.substance(&snapshot.id) == Some(snapshot.substance_sha256.as_str());
-    if unchanged {
+    let Some(previous_substance) = previous.substance(&snapshot.id) else {
+        // The source is new to this chain. Listing every item as an addition
+        // would bury the real signal under a one-time dump.
+        let mut delta = Delta::new(&snapshot.id);
+        delta.changed = true;
+        delta.severity = Severity::Major;
+        delta.counts = genesis_counts(snapshot);
+        delta.drift.push(format!(
+            "`{}` added to the bundle; nothing to diff against",
+            snapshot.id
+        ));
+        return delta;
+    };
+    if previous_substance == snapshot.substance_sha256 {
         return Delta::new(&snapshot.id);
     }
 
@@ -111,6 +158,7 @@ fn delta_for(snapshot: &Snapshot, previous: Option<&Bundle>) -> Delta {
         RULES => diff::rules::diff(before, after),
         SCHEMAS => diff::schemas::diff(before, after),
         MARKETPLACE => diff::marketplace::diff(before, after),
+        OSCAL => diff::oscal::diff(before, after, referenced),
         _ => {
             let mut delta = Delta::new(&snapshot.id);
             delta.changed = true;
@@ -143,6 +191,12 @@ fn genesis_counts(snapshot: &Snapshot) -> std::collections::BTreeMap<String, usi
             let (leaves, _) = diff::rules::flatten(&snapshot.content);
             counts.insert("rules".to_string(), leaves.len());
         }
+        OSCAL => {
+            counts.insert(
+                "controls".to_string(),
+                diff::oscal::flatten(&snapshot.content).len(),
+            );
+        }
         SCHEMAS => {
             counts.insert(
                 "files".to_string(),
@@ -172,12 +226,7 @@ mod tests {
     use std::collections::BTreeMap;
 
     fn snapshot(id: &str, content: Value) -> Snapshot {
-        let volatile = sources::spec(id).volatile;
-        let substance = if volatile.is_empty() {
-            content.clone()
-        } else {
-            crate::canon::without(&content, volatile)
-        };
+        let substance = crate::canon::without_all(&content, sources::spec(id).volatile);
         Snapshot {
             id: id.to_string(),
             provenance: Provenance {
@@ -198,7 +247,8 @@ mod tests {
     fn rules(version: &str, force: &str) -> Value {
         json!({
             "info": {"version": version, "last_updated": "2026-07-14"},
-            "FRR": {"VDR": {"data": {"all": {"FRP": {"VDR-FRP-ONE": {"force": force}}}}}}
+            "FRR": {"VDR": {"data": {"all": {"FRP": {"VDR-FRP-ONE": {"force": force}}}}}},
+            "CTL": {"AC": {"AC-20": {"guidance": ["FedRAMP amends this control"]}}}
         })
     }
 
@@ -213,11 +263,17 @@ mod tests {
         json!({"fedramp-incident-report-schema-2026-06-24.json": {"type": "object"}})
     }
 
+    fn oscal() -> Value {
+        json!({"catalog": {"uuid": "u", "metadata": {"version": "5.2.0"},
+            "groups": [{"id": "ac", "controls": [{"id": "ac-20", "title": "Use of External Systems"}]}]}})
+    }
+
     fn all(version: &str, force: &str, reuse: i64) -> Vec<Snapshot> {
         vec![
             snapshot(RULES, rules(version, force)),
             snapshot(SCHEMAS, schemas()),
             snapshot(MARKETPLACE, market(reuse)),
+            snapshot(OSCAL, oscal()),
         ]
     }
 
@@ -245,6 +301,46 @@ mod tests {
         assert_eq!(plan.delta(RULES).unwrap().severity, Severity::Major);
         assert_eq!(plan.delta(MARKETPLACE).unwrap().severity, Severity::Routine);
         assert!(plan.headline().contains("RULES CHANGED"));
+    }
+
+    /// Adding a source to an existing chain reports a summary, not a dump.
+    #[test]
+    fn a_newly_added_source_is_summarised_rather_than_listed() {
+        let three = vec![
+            snapshot(RULES, rules("v1", "SHOULD")),
+            snapshot(SCHEMAS, schemas()),
+            snapshot(MARKETPLACE, market(313)),
+        ];
+        let before = compare(&three, None);
+        let plan = compare(&all("v1", "SHOULD", 313), Some(&before.bundle));
+
+        let delta = plan.delta(OSCAL).unwrap();
+        assert!(delta.changed);
+        assert_eq!(delta.severity, Severity::Major);
+        assert!(delta.added.is_empty(), "should not list every control");
+        assert_eq!(delta.counts.get("controls"), Some(&1));
+        assert!(delta.drift[0].contains("added to the bundle"));
+    }
+
+    /// A NIST republish must not be announced as a FedRAMP rules change.
+    #[test]
+    fn the_headline_names_the_source_that_actually_moved() {
+        let first = compare(&all("v1", "SHOULD", 313), None);
+        let mut later = all("v1", "SHOULD", 313);
+        later[3].content["catalog"]["groups"][0]["controls"][0]["title"] = json!("Renamed");
+        later[3].substance_sha256 = crate::canon::digest_value(&later[3].content).unwrap();
+
+        let plan = compare(&later, Some(&first.bundle));
+        assert!(
+            plan.headline().contains("800-53 CHANGED"),
+            "{}",
+            plan.headline()
+        );
+        assert!(
+            !plan.headline().contains("RULES CHANGED"),
+            "{}",
+            plan.headline()
+        );
     }
 
     #[test]

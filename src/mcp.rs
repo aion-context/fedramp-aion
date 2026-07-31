@@ -107,6 +107,7 @@ impl Server {
             "fedramp_obligations" => self.obligations(arguments),
             "fedramp_rule" => self.rule(arguments),
             "fedramp_search" => self.search(arguments),
+            "fedramp_control" => self.control(arguments),
             other => anyhow::bail!("unknown tool `{other}`"),
         }
     }
@@ -164,6 +165,45 @@ impl Server {
         Ok(json!({
             "id": id,
             "matches": matches,
+            "provenance": self.provenance(),
+        }))
+    }
+
+    /// The 800-53 control text behind a FedRAMP reference, from the signed
+    /// catalog. FedRAMP amends controls without restating them, so an agent
+    /// answering from the ruleset alone is answering from half the source.
+    fn control(&self, arguments: &Value) -> Result<Value> {
+        let requested = arguments
+            .get("id")
+            .and_then(Value::as_str)
+            .context("`id` is required")?;
+        let id = crate::diff::oscal::normalise_id(requested);
+        let catalog = self
+            .bundle
+            .section(crate::sources::OSCAL)
+            .context("chain payload has no oscal section; re-sync to add it")?;
+        let controls = crate::diff::oscal::flatten(catalog);
+        let control = controls
+            .get(&id)
+            .with_context(|| format!("no 800-53 control `{id}`"))?;
+
+        let rules = self.rules()?;
+        let fedramp_overlay = rules
+            .get("CTL")
+            .and_then(Value::as_object)
+            .and_then(|families| {
+                families.values().find_map(|controls| {
+                    controls.as_object()?.iter().find_map(|(key, value)| {
+                        (crate::diff::oscal::normalise_id(key) == id).then(|| value.clone())
+                    })
+                })
+            });
+        Ok(json!({
+            "id": id,
+            "requested": requested,
+            "control": control,
+            "fedramp_overlay": fedramp_overlay,
+            "referenced_by_fedramp": crate::diff::oscal::referenced_controls(rules).contains(&id),
             "provenance": self.provenance(),
         }))
     }
@@ -236,6 +276,17 @@ fn tool_definitions() -> Value {
         {
             "name": "fedramp_rule",
             "description": "One rule by its FedRAMP id, e.g. CCM-OCR-AVL or KSI-CED-RAT.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {"id": {"type": "string"}},
+                "required": ["id"],
+            },
+        },
+        {
+            "name": "fedramp_control",
+            "description": "The NIST 800-53 control text behind a FedRAMP reference, from the \
+                            signed catalog, plus any FedRAMP overlay (parameters or guidance) \
+                            for it. Accepts either id form: AC-06-01 or ac-6.1.",
             "inputSchema": {
                 "type": "object",
                 "properties": {"id": {"type": "string"}},
@@ -395,7 +446,7 @@ mod tests {
             .handle(&json!({"jsonrpc": "2.0", "id": 2, "method": "tools/list"}))
             .unwrap();
         let tools = response["result"]["tools"].as_array().unwrap();
-        assert_eq!(tools.len(), 4);
+        assert_eq!(tools.len(), 5);
         for tool in tools {
             assert!(tool["name"].is_string());
             assert!(tool["description"].is_string());

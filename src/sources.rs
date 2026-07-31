@@ -11,6 +11,7 @@ use crate::canon;
 pub const RULES: &str = "rules";
 pub const SCHEMAS: &str = "schemas";
 pub const MARKETPLACE: &str = "marketplace";
+pub const OSCAL: &str = "oscal";
 
 /// Where a source lives and how its substance projection is taken.
 pub struct SourceSpec {
@@ -19,8 +20,9 @@ pub struct SourceSpec {
     pub path: &'static str,
     /// Directory sources fetch every `*.json` under `path`.
     pub is_dir: bool,
-    /// Field stripped before the gate digest (DESIGN.md §3.4).
-    pub volatile: &'static [&'static str],
+    /// Fields stripped before the gate digest (DESIGN.md §3.4). Each entry is
+    /// a path; NIST's OSCAL publishes churn in more than one place.
+    pub volatile: &'static [&'static [&'static str]],
 }
 
 pub const SOURCES: &[SourceSpec] = &[
@@ -29,7 +31,7 @@ pub const SOURCES: &[SourceSpec] = &[
         repo: "FedRAMP/rules",
         path: "fedramp-consolidated-rules.json",
         is_dir: false,
-        volatile: &["info", "last_updated"],
+        volatile: &[&["info", "last_updated"]],
     },
     SourceSpec {
         id: SCHEMAS,
@@ -38,12 +40,26 @@ pub const SOURCES: &[SourceSpec] = &[
         is_dir: true,
         volatile: &[],
     },
+    // NIST republishes with a fresh document uuid, a new last-modified, and a
+    // bumped oscal-version while the control text is byte-identical. Gating on
+    // those would report an 800-53 change on a publish that changed nothing.
+    SourceSpec {
+        id: OSCAL,
+        repo: "usnistgov/oscal-content",
+        path: "nist.gov/SP800-53/rev5/json/NIST_SP-800-53_rev5_catalog-min.json",
+        is_dir: false,
+        volatile: &[
+            &["catalog", "uuid"],
+            &["catalog", "metadata", "last-modified"],
+            &["catalog", "metadata", "oscal-version"],
+        ],
+    },
     SourceSpec {
         id: MARKETPLACE,
         repo: "FedRAMP/marketplace-fedramp-gov-data",
         path: "data.json",
         is_dir: false,
-        volatile: &["meta"],
+        volatile: &[&["meta"]],
     },
 ];
 
@@ -79,12 +95,7 @@ pub struct Snapshot {
 
 impl Snapshot {
     fn build(id: &str, provenance: Provenance, content: Value) -> Result<Self> {
-        let volatile = spec(id).volatile;
-        let substance = if volatile.is_empty() {
-            content.clone()
-        } else {
-            canon::without(&content, volatile)
-        };
+        let substance = canon::without_all(&content, spec(id).volatile);
         Ok(Self {
             id: id.to_string(),
             provenance,

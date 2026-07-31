@@ -459,6 +459,55 @@ fn issue_validation_receipt(
     Ok(())
 }
 
+/// FedRAMP amends 800-53 controls without restating them; this joins the two
+/// halves from the same signed payload.
+pub fn run_control(args: &cli::ControlArgs) -> Result<i32> {
+    let bundle = chain::previous_bundle(&args.chain)?
+        .ok_or_else(|| anyhow::anyhow!("no chain at {}", args.chain.display()))?;
+    let catalog = bundle
+        .section(sources::OSCAL)
+        .ok_or_else(|| anyhow::anyhow!("chain has no oscal section; re-sync to add it"))?;
+    let id = diff::oscal::normalise_id(&args.id);
+    let controls = diff::oscal::flatten(catalog);
+    let control = controls
+        .get(&id)
+        .ok_or_else(|| anyhow::anyhow!("no 800-53 control `{id}`"))?;
+
+    let rules = bundle.section(sources::RULES);
+    let referenced = rules.map(|r| diff::oscal::referenced_controls(r).contains(&id));
+
+    if args.json {
+        emit(&format!(
+            "{}\n",
+            serde_json::to_string_pretty(&serde_json::json!({
+                "id": id, "control": control, "referenced_by_fedramp": referenced
+            }))?
+        ))?;
+        return Ok(0);
+    }
+
+    let title = control
+        .get("title")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or("(untitled)");
+    let mut out = format!("# {id} — {title}\n\n");
+    if referenced == Some(true) {
+        out.push_str("FedRAMP references this control.\n\n");
+    }
+    for part in control
+        .get("parts")
+        .and_then(serde_json::Value::as_array)
+        .unwrap_or(&Vec::new())
+    {
+        if let Some(prose) = part.get("prose").and_then(serde_json::Value::as_str) {
+            out.push_str(prose);
+            out.push_str("\n\n");
+        }
+    }
+    emit(&out)?;
+    Ok(0)
+}
+
 pub fn run_capture(args: &CaptureArgs) -> Result<i32> {
     std::fs::create_dir_all(&args.out)?;
     let fetcher = fetcher(&args.sources);
