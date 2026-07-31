@@ -12,12 +12,12 @@
   "marketplace": {
     "repo": "FedRAMP/marketplace-fedramp-gov-data",
     "path": "data.json",
-    "commit": "c154770b300d478a82a15bf3c379b1225e0e44a6",
-    "committed_at": "2026-07-30T06:27:56Z",
-    "raw_sha256": "bc660fcc635283b71a9caa3808742b5232ea4120157bcb537062ec3406e0db2e",
-    "bytes": 4398361,
-    "content_sha256": "a9a5eb19d7f600de46c4b4e7c2d9cf512deff2c1f6a9e6fd7ceece73f26aa2de",
-    "substance_sha256": "a69088fe9eb0c025f13fcaba1045261993735c3a1f53ee51feb24782883592d1"
+    "commit": "1af013b6cf3fb8253499af0529029a5e8c5fff73",
+    "committed_at": "2026-07-31T06:28:06Z",
+    "raw_sha256": "4d8a68e23160037265ec8bd168136510a014a29c72281e4b6a2fef3837c3f6d0",
+    "bytes": 4401462,
+    "content_sha256": "6c9b50ba6d764c5a33a9695166712256099b8037dc2fca4c32d820b6a623a5df",
+    "substance_sha256": "b2a0059ac3fcba1d08c5c81bf5a1f1becc7ff723de0f9f749ffdb470a0cfc189"
   },
   "oscal": {
     "repo": "usnistgov/oscal-content",
