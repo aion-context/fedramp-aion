@@ -172,7 +172,11 @@ fn list(out: &mut String, label: &str, ids: &[String]) {
 /// `key=value` lines for `$GITHUB_OUTPUT`.
 pub fn github_outputs(plan: &Plan, chain_version: Option<u64>) -> String {
     let mut out = String::new();
+    // `changed` says upstream moved; `committed` says a version was signed.
+    // They diverge under `--force`, and a workflow that keys the publish step
+    // on `changed` would throw the forced version away.
     let _ = writeln!(out, "changed={}", plan.changed);
+    let _ = writeln!(out, "committed={}", chain_version.is_some());
     let _ = writeln!(out, "severity={}", plan.severity);
     let _ = writeln!(out, "genesis={}", plan.genesis);
     let _ = writeln!(out, "upstream_version={}", plan.upstream_version);
@@ -255,10 +259,17 @@ mod tests {
     fn outputs_are_shell_safe_key_values() {
         let outputs = github_outputs(&plan_fixture(), Some(7));
         assert!(outputs.contains("changed=true"));
+        assert!(outputs.contains("committed=true"));
         assert!(outputs.contains("severity=major"));
         assert!(outputs.contains("chain_version=7"));
         assert!(outputs.contains("rules_changed=true"));
         assert!(outputs.lines().all(|line| line.contains('=')));
+    }
+
+    #[test]
+    fn committed_is_false_when_no_version_was_signed() {
+        let outputs = github_outputs(&plan_fixture(), None);
+        assert!(outputs.contains("committed=false"));
     }
 
     #[test]

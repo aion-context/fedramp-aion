@@ -75,7 +75,7 @@ jobs:
             $FORCE
 
       - name: verify the signed chain independently
-        if: steps.sync.outputs.changed == 'true'
+        if: steps.sync.outputs.committed == 'true'
         run: ./target/release/fedramp-aion verify
 
       - name: job summary
@@ -85,7 +85,7 @@ jobs:
       # never carries upstream text into a shell.
       - name: open pull request
         id: pr
-        if: steps.sync.outputs.changed == 'true'
+        if: steps.sync.outputs.committed == 'true'
         env:
           # An org that disables "Allow GitHub Actions to create and approve
           # pull requests" blocks github.token from opening one. A PAT secret,
