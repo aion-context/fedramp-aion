@@ -2,12 +2,12 @@
   "kev": {
     "repo": "cisagov/kev-data",
     "path": "known_exploited_vulnerabilities.json",
-    "commit": "970428211c11666db563109797cf3d20304dba00",
-    "committed_at": "2026-08-06T21:59:26Z",
-    "raw_sha256": "2f9153f9c6653728060b2861db60aee2911efc10db59f4d3fcabe623184d4d2e",
-    "bytes": 1576074,
-    "content_sha256": "e1869f7d8883f3d9d8a447d03d65c071bdd1e99216ae79b339507be9347fd91c",
-    "substance_sha256": "adc6173abbf62c6718c8b061fd4861f89dd54190390ef37e84391516d3ede9d1"
+    "commit": "ca49071c856b46fab8410a4ab4213a245c750477",
+    "committed_at": "2026-08-07T17:49:46Z",
+    "raw_sha256": "2a6c54ce139af5a6e926fdcf2c808c945ad113713fb4554b7c8cf87446ea6ec9",
+    "bytes": 1577762,
+    "content_sha256": "5d97488f3f28a6f51655b73225266fe0cb486a6c9641ad3c4c2b726190015c2c",
+    "substance_sha256": "7d383258d2b94f3857811281729852c5295e0bacc8de703555a1b7fe6f0365f6"
   },
   "marketplace": {
     "repo": "FedRAMP/marketplace-fedramp-gov-data",
