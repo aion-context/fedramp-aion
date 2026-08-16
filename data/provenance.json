@@ -2,22 +2,22 @@
   "kev": {
     "repo": "cisagov/kev-data",
     "path": "known_exploited_vulnerabilities.json",
-    "commit": "3204b12176c29f8572e6a825028e59249306a0d8",
-    "committed_at": "2026-08-11T20:43:19Z",
-    "raw_sha256": "64bb30c14ab0aa40f0032325a2303f8eb3a348348a27d6533b9e4ddf4424d5d8",
-    "bytes": 1583191,
-    "content_sha256": "e7a333d28799098705fed4a19fd032cfa76f35456741ce750451644b0cd61221",
-    "substance_sha256": "15344a86ebe9ad03802ebc558f2f68755cb7009818a4200bf57a9c957c9b5028"
+    "commit": "9f0c5cb0ba6c91737932f0d6a58aa6059c559dfd",
+    "committed_at": "2026-08-14T16:52:56Z",
+    "raw_sha256": "52a5fe9ab6c3379298707559b5df54fb50daac45d27ea74e85d45f9632b59a79",
+    "bytes": 1583171,
+    "content_sha256": "5694515eea0fc42cb0cde99f2dedb316b0b521ba634eeab759e564cb9a6e1085",
+    "substance_sha256": "fda3fe622baae9740f0e3c9a34a92f8547d7f8052e76c9b305540bc7ef486f52"
   },
   "marketplace": {
     "repo": "FedRAMP/marketplace-fedramp-gov-data",
     "path": "data.json",
-    "commit": "3cd1d181c551088a504cfb46c972768646e3b824",
-    "committed_at": "2026-08-13T06:28:16Z",
-    "raw_sha256": "48e5c2ff2a30e686657e444e148d8532cbeb1003a598cb432c15b68bf8ccb6fd",
-    "bytes": 4387963,
-    "content_sha256": "7cad8e5163bb2aa93261d336e81aab3631b1543627e1b0ba6bbf44e7a8e4feea",
-    "substance_sha256": "e1be308d75ccc6f00ce6e51349ac0edcd62d2f56ed96454ea4ea448c049f65f9"
+    "commit": "1e0e07d05c4dccd622f3e0c5cd851272c1bf4a95",
+    "committed_at": "2026-08-15T06:27:58Z",
+    "raw_sha256": "a9e1c077e6c69e4951f9458943f8b375386b8f117ad05e9352c70f272ee24121",
+    "bytes": 4388211,
+    "content_sha256": "cd197d7e79cc20bac63fe9cc9ccf51f86a48967138189ea0de328afa7d400c3a",
+    "substance_sha256": "18b509281bab09d0c0d461dec7be52683ca6aa3e70ca12782ff42528bbe8ce2f"
   },
   "oscal": {
     "repo": "usnistgov/oscal-content",
@@ -42,24 +42,24 @@
   "schemas": {
     "repo": "FedRAMP/schemas",
     "path": "*.json",
-    "commit": "5d418813f5bb93f8f447c1df7aeae44ce022c0f2",
-    "committed_at": "2026-08-11T02:36:05Z",
-    "raw_sha256": "71ca5ed097544e9980466a25bca0323aed5cb2fd75019344ccf213784b17811d",
-    "bytes": 60631,
+    "commit": "ae43ae2952c5dd5c56d54d12e8b92c7db1b3710a",
+    "committed_at": "2026-08-15T00:49:41Z",
+    "raw_sha256": "4500a1a8613a982b39c35e44c3f858165f1a5b8d542ffd95d0f4b4ba5fe16ff2",
+    "bytes": 61478,
     "files": {
       "fedramp-accepted-vulnerability-info-schema-2026-06-24.json": "2b0b758205b7cae4695a758a6a1b0a98d128972913aad2afdb9bc2e2207192d0",
       "fedramp-advisor-information-schema-2026-06-24.json": "971d73baf9a76ea7b5e40e35064b4daf231243171526459db0ab665a506274e6",
       "fedramp-assessor-information-schema-2026-06-24.json": "1dc4b7a8fbd279c490cae95ceefc42ea0096920f64dfe7e145f1ccc91fe656ca",
-      "fedramp-certification-package-overview-schema-2026-06-24.json": "14cc7e6802142c70e6fe1d3101d94948d6625da5c66214e45077daabae5e4af1",
-      "fedramp-common-definitions-schema-2026-06-24.json": "893e5e9e7ee70e65c87c33d3f1b16fd3777d3483cf58ce249ed7ac29869499dc",
+      "fedramp-certification-package-overview-schema-2026-06-24.json": "331b22a8437da8117c0e5ac0514dde3c73e4a38427da9e1e230fe2c3c52998a4",
+      "fedramp-common-definitions-schema-2026-06-24.json": "13bed0a781e5e75c5cb923fc2b7d9e10330c06e0f21260a738dc8ed4d3349455",
       "fedramp-historical-ver-activity-schema-2026-06-24.json": "dbbddb51ee25bfe9568c1dcfe1047ea206539dc91dad1fd2658f1a5accf2a6fb",
-      "fedramp-incident-report-schema-2026-06-24.json": "982392b213d8a9555cd716ec44a3850f1c581db9b79f19adff26e760ed7883c5",
-      "fedramp-ongoing-certification-report-schema-2026-06-24.json": "042d0fea894c4b7454bef1556a1dd41627319508a750aae4718042becd9198b1",
-      "fedramp-security-decision-record-schema-2026-06-24.json": "36c90cf4cbd5387da39515ad61f90a16a3b92aae35c77e4c7e83a4deec5ab49f",
+      "fedramp-incident-report-schema-2026-06-24.json": "45bc7494faaaa74f374b27d744318efdf394275e4230499804ef779c47b62fe9",
+      "fedramp-ongoing-certification-report-schema-2026-06-24.json": "f691ce3571337bed24cc81d8ef1c832a1e28e22b6b6238379208b86f0283feb3",
+      "fedramp-security-decision-record-schema-2026-06-24.json": "aba4386befcd9e6642fafee02821857f4a0daa11eafd5051a52bce209443040f",
       "fedramp-significant-change-notifications-schema-2026-06-24.json": "b627ed012781ad0e8a70d94f0dede731a7364343e8ce5f701ce268b70075751d",
       "fedramp-vulnerability-detail-report-schema-2026-06-24.json": "5e9499e8cb9d0367c888ce41040175270fc9f007ae4f61d0ced34cca81cfe497"
     },
-    "content_sha256": "71ca5ed097544e9980466a25bca0323aed5cb2fd75019344ccf213784b17811d",
-    "substance_sha256": "71ca5ed097544e9980466a25bca0323aed5cb2fd75019344ccf213784b17811d"
+    "content_sha256": "4500a1a8613a982b39c35e44c3f858165f1a5b8d542ffd95d0f4b4ba5fe16ff2",
+    "substance_sha256": "4500a1a8613a982b39c35e44c3f858165f1a5b8d542ffd95d0f4b4ba5fe16ff2"
   }
 }
