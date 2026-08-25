@@ -7,6 +7,12 @@ chain as the deliverable.
 The chain answers one question with a signature behind it: **what did FedRAMP
 require on date X, and who says so?**
 
+> **Not legal advice, not a compliance determination, and not a FedRAMP
+> authorization.** This is an independent project, not affiliated with FedRAMP,
+> GSA, NIST or CISA. A signature here proves what was read and who signed for
+> it, never that the reading was right or that an obligation was met. See
+> [What this is not](#what-this-is-not) before relying on any of it.
+
 ## Sources
 
 | id | repo | what |
@@ -364,6 +370,56 @@ Nothing key-shaped is ever written to the runner's disk, and `.keys/` plus
 Optional: enable *Allow auto-merge* in repository settings so routine PRs wait
 for required checks instead of merging immediately.
 
+## What this is not
+
+Read this before using anything here to decide whether a system is compliant.
+
+**Not a FedRAMP authorization.** Nothing this produces authorizes anything. A
+package that passes the validator, and a receipt that verifies, are statements
+about *documents* — only the FedRAMP PMO and authorizing agencies grant, deny,
+or revoke authorization. Treating a green verdict here as an authorization
+signal would invert what it means.
+
+**Not legal advice and not a compliance determination.** The obligations layer
+resolves what the published ruleset says applies to a profile. Whether an
+organization has *satisfied* those obligations is a judgement this makes no
+attempt at.
+
+**Not affiliated with, endorsed by, or connected to** FedRAMP, the General
+Services Administration, NIST, or CISA. It is an independent project that
+reads their public repositories. The 800-53 catalog is redistributed from
+`usnistgov/oscal-content` and the KEV catalog from `cisagov/kev-data`; both
+remain the work of their publishers.
+
+**A signature proves provenance, not correctness.** The chain proves *what this
+program read from the pinned upstream commits, and who signed for it*. It does
+not prove the reading was right, that the diff caught everything, or that an
+obligation was correctly resolved for a profile. Those are two different claims
+and conflating them would be the most damaging thing this project could do.
+
+**A receipt is a self-assertion.** It is signed by the operator, about their own
+conduct. Verification checks four things — that the operator's registry-pinned
+key signed it, that no field moved after sealing, that it cites this chain and
+version, and that it does not misstate what binds them. It says **nothing about
+whether the action described actually happened or was adequate**. A receipt is
+evidence an operator committed to a claim against a specific ruleset version;
+it is not third-party assurance.
+
+**"Valid per the schema" is not "satisfies the rule."** The validator checks
+structure against the signed schemas. It does not evaluate whether the content
+meets `VDR-FRP-*` or any other rule, and conflating the two would oversell the
+verdict.
+
+**The validator repairs what FedRAMP publishes.** Their cross-schema `$ref`s
+name resources that 404, so resolution is offline against the signed set with
+the path form read as the fragment it evidently means. Every repair is recorded
+in the report and in any receipt — a verdict here is over the schemas *as
+repaired*, never a claim that the published bytes validated as they stand.
+
+**Snapshots are point-in-time.** `data/` and each release hold the sources at a
+pinned commit. The marketplace, the KEV catalog and the ruleset all move; a
+signed version says what they held then, not what they hold now.
+
 ## Tests
 
 ```sh
@@ -374,3 +430,13 @@ cargo clippy --all-targets
 The integration suite drives the whole pipeline offline: genesis, idempotent
 reruns, daily no-op rewrites, classified changes, upstream drift, tampered
 snapshots, malformed upstream responses, and payload determinism.
+
+## License
+
+Dual-licensed under [MIT](LICENSE-MIT) **OR** [Apache-2.0](LICENSE-APACHE), at
+your option.
+
+That covers the code. It does not cover the upstream data: the FedRAMP rules,
+schemas and marketplace exports, NIST's 800-53 catalog, and CISA's KEV catalog
+are works of the United States Government redistributed here, not works of
+authorship of this project.
