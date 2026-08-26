@@ -1,0 +1,91 @@
+# fedramp-aion
+
+> Watches FedRAMP's authoritative machine-readable sources, detects real change,
+> and emits a cryptographically signed `.aion` chain.
+
+## What this repository is
+
+It reads FedRAMP's consolidated rules, its package schemas, the marketplace
+export, NIST SP 800-53 rev5, and CISA's KEV catalog at pinned upstream commits;
+diffs them semantically; and signs the result. Released as `chain-vN` tags.
+
+It also resolves what applies to a given profile (role, class, certification
+type), validates a submission package offline against the signed schemas, seals
+an operator's action into a receipt, and serves the signed ruleset to agents
+over MCP.
+
+## What you may and may not conclude from it
+
+- **Not a FedRAMP authorization.** Nothing here authorizes anything. A package
+  that passes the validator and a receipt that verifies are statements about
+  *documents*; only the FedRAMP PMO and authorizing agencies grant, deny or
+  revoke authorization. Reading a green verdict as an authorization signal
+  inverts what it means.
+- **A signature proves provenance, not correctness.** The chain proves what was
+  read from the pinned upstream commits and who signed for it — not that the
+  reading was right or that an obligation was correctly resolved.
+- **A receipt is a self-assertion.** Verification checks that the operator's
+  registry-pinned key signed it, that no field moved after sealing, that it
+  cites this chain and version, and that it does not misstate what binds them.
+  It says **nothing** about whether the action happened or was adequate. That is
+  not third-party assurance.
+- **"Valid per the schema" is not "satisfies the rule."**
+- **Verdicts are over schemas as repaired.** FedRAMP's cross-schema `$ref`s name
+  resources that 404; resolution is offline against the signed set and every
+  repair is recorded in the report and in any receipt.
+- **Not legal advice, and not affiliated with** FedRAMP, GSA, NIST or CISA.
+- **Snapshots are point-in-time.** The marketplace, KEV and the ruleset all
+  move; a signed version says what they held then.
+
+## The relationship to the other repositories
+
+| repository | corpus | this repo's relation to it |
+|---|---|---|
+| `aion-context` | the `.aion` format and library | dependency |
+| `aion-doe` | 34 CFR, all of Title 34 (Education) | sibling, same pattern, no data overlap |
+| `selpa-aion` | Cal. Educ. Code Part 30 (special education) | sibling; cites into `aion-doe`, not into this |
+
+All three watch an authoritative machine-readable source, detect real change,
+and emit a signed chain saying what was required on a date and who signed for
+it. What differs is the corpus and how it is pinned:
+
+| repository | pin | change gate |
+|---|---|---|
+| `fedramp-aion` | upstream **commit SHA** | content digest, volatile fields projected away |
+| `aion-doe` | eCFR **date** (byte-stable) | eCFR's own amendment ledger |
+| `selpa-aion` | leginfo biennium **archive** | `LAW_SECTION_TBL` effective dates |
+
+This repository shares no data with the other two. The Education repositories
+join to each other because California statute cites 34 CFR by number; nothing
+in FedRAMP does.
+
+## Where the data is
+
+- `fedramp.aion` — the signed chain.
+- `registry.json` — public keys only.
+- `data/*.json` — canonical per-source snapshots, bound by digests inside the
+  signed payload.
+- Releases carry the chain, the registry, and every snapshot.
+
+## Commands an agent can rely on
+
+```sh
+fedramp-aion verify
+fedramp-aion obligations --role Providers --class B --type Rev5 --json
+fedramp-aion rule CPO-CSF-CPM
+fedramp-aion control AC-20
+fedramp-aion kev CVE-2026-20316
+fedramp-aion validate ocr.json --json     # exit 0 valid, 2 invalid
+fedramp-aion mcp --chain fedramp.aion --registry registry.json
+```
+
+Over MCP, every tool result carries `provenance`: the chain version, whether it
+verified, the bundle digest, and the upstream commit it came from — so an agent
+citing FedRAMP can be checked against a signed artifact instead of believed.
+
+## Reading order
+
+1. `README.md` — sources, change detection, obligations, receipts, validator, MCP
+2. `DESIGN.md` — measured upstream behaviour and the determinism invariants
+3. `src/obligations.rs` — how applicability is assembled from four incomplete places
+4. `src/receipt.rs` — what a receipt binds, and the attacks it rejects

@@ -13,6 +13,41 @@ require on date X, and who says so?**
 > it, never that the reading was right or that an obligation was met. See
 > [What this is not](#what-this-is-not) before relying on any of it.
 
+## The family
+
+Three repositories, one pattern: watch an authoritative machine-readable
+source, detect *real* change, and emit a signed `.aion` chain that says what
+was required on a date and who signed for it.
+
+| repository | corpus | pin | change gate |
+|---|---|---|---|
+| [`fedramp-aion`](https://github.com/aion-context/fedramp-aion) | FedRAMP rules, package schemas, marketplace, NIST 800-53, CISA KEV | upstream commit SHA | content digest, with volatile fields projected away |
+| [`aion-doe`](https://github.com/aion-context/aion-doe) | **34 CFR** — all of Title 34, Education | eCFR **date** (byte-stable) | eCFR's own amendment ledger |
+| [`selpa-aion`](https://github.com/aion-context/selpa-aion) | **Cal. Educ. Code Part 30** — special education | leginfo biennium archive | `LAW_SECTION_TBL` effective dates |
+
+All three are built on [`aion-context`](https://github.com/aion-context/aion-context),
+which defines the `.aion` format.
+
+**They are not independent.** `selpa-aion` and `aion-doe` describe two halves of
+the same duties, and the statute makes the connection itself — Cal. Educ. Code
+§ 56341(c) cites *"Sections 300.308 and 300.310 of Title 34 of the Code of
+Federal Regulations"* in its own text. 96 of Part 30's 401 sections cite federal
+law by number, and those citations are carried inside `selpa-aion`'s signed
+payload so the join is signed rather than re-derived by whoever reads it.
+
+```
+                       aion-context  (the .aion format)
+                              │
+        ┌─────────────────────┼─────────────────────┐
+        │                     │                     │
+  fedramp-aion           aion-doe  ◄────cites──  selpa-aion
+   (federal cloud      (34 CFR, incl.            (Cal. Educ. Code
+    authorization)      IDEA Parts B & C)         Part 30)
+```
+
+This repository shares no data with the other two. They join to each other
+because California statute cites 34 CFR by number; nothing in FedRAMP does.
+
 ## Sources
 
 | id | repo | what |
