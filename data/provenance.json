@@ -12,11 +12,11 @@
   "marketplace": {
     "repo": "FedRAMP/marketplace-fedramp-gov-data",
     "path": "data.json",
-    "commit": "7531b86d72a9db2da24b8824bb135256eb9e835c",
-    "committed_at": "2026-09-12T06:27:58Z",
-    "raw_sha256": "e8005746a973a2e52e1eb8591f6790c3f2f5bfb165a6151412c465ba0023f5c4",
+    "commit": "1f31bb73cb15ef3c2199c2cf9b0edadee5a9d227",
+    "committed_at": "2026-09-14T06:27:48Z",
+    "raw_sha256": "53c1561da3a5c47ef8ef457f336a3e1d17e6cf99a89868a9350feced14d2a476",
     "bytes": 4394463,
-    "content_sha256": "3aad4f7eded6b1ac450d3382f9f3f89a7bb6f62b6af329b0b93ae1f937d3bd25",
+    "content_sha256": "08b4fe69c2d64f0a0a3d7eff9187cb71999a7a5a1a13ffe13f3a691187f7899c",
     "substance_sha256": "08767c595755ce72f0bc8ae3b730c7696cea55eb25fb2c272cce03ac0761bea0"
   },
   "oscal": {
@@ -32,12 +32,12 @@
   "rules": {
     "repo": "FedRAMP/rules",
     "path": "fedramp-consolidated-rules.json",
-    "commit": "083137da3b3cbd88eb55575fa2f153fb9a7b0e4c",
-    "committed_at": "2026-07-14T21:11:57Z",
-    "raw_sha256": "135707003f0aaa5ceb10d7d32c2681e5b1585a4eaf4403d0d135837787e5ae8e",
-    "bytes": 567435,
-    "content_sha256": "b19fedd4c1bacf5ae4b153c81d5a697ad2b285f489b4f586da3e9d6c34d36a49",
-    "substance_sha256": "28e1e046861df63585401fa43df04cc6f867b418bc6954915cfeaab02746dee7"
+    "commit": "58487bda77d76d9ce334304ec2e779ece7cc7d54",
+    "committed_at": "2026-09-13T22:17:09Z",
+    "raw_sha256": "64915d88e72353c95f321ea4a9014516ac9441972cbd7f3d1abef7d1514c8fc8",
+    "bytes": 564946,
+    "content_sha256": "f3e9fd08a26d75ad65773a3c806dd2aef40e8131791c35f8dd9ede0989d42d1c",
+    "substance_sha256": "b78b26f7aa7fb69cf70ea1b671e12bd853916f1ea0ebe5ef80abc7d96c55e24e"
   },
   "schemas": {
     "repo": "FedRAMP/schemas",
