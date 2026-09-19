@@ -2,22 +2,22 @@
   "kev": {
     "repo": "cisagov/kev-data",
     "path": "known_exploited_vulnerabilities.json",
-    "commit": "9b6a0a2834a4d099a1362eb5593367ecd6454cc6",
-    "committed_at": "2026-09-16T21:55:47Z",
-    "raw_sha256": "72b4e3489021d2ad50c4f9b8ddddd1608a9e6b87dd7beedc126f6341ea98f105",
-    "bytes": 1727984,
-    "content_sha256": "01e56f34135c662366170f4a33e9ff2e44cf6af043a0abf387cce0ac83d14ebe",
-    "substance_sha256": "4a30b411a3a9eb0498ef2c86894eaa8466464d09a9c4f1385579a638764c21f9"
+    "commit": "8f26120eca10ef7425d7dc4154754b9276a8200a",
+    "committed_at": "2026-09-18T20:31:31Z",
+    "raw_sha256": "7b770a6f5eb1d47a7176ef2f1428594551399912c8f3b5d2bf0f562b7e745e06",
+    "bytes": 1735385,
+    "content_sha256": "f58c6e53ea7e9705f2f0084bff8fcb8ffefb3baf08f1f7c42bd2c49172cc7bb4",
+    "substance_sha256": "3e7b03375496a7b7d10818107a4ae8698de5f71abeb9b39da82881d8fe40eac7"
   },
   "marketplace": {
     "repo": "FedRAMP/marketplace-fedramp-gov-data",
     "path": "data.json",
-    "commit": "e5629ff225f643c68a6aeca31ca2a66c9c820cdb",
-    "committed_at": "2026-09-18T06:27:50Z",
-    "raw_sha256": "db2d03fa40cba0e5287b9cc7361e71b7c30c7ca9d51efb7b540477105fb30c7b",
-    "bytes": 4390814,
-    "content_sha256": "64c73cec69e3e802b9c9cfb1d6af50edd1c143d9760a757680c76e4c69cbd719",
-    "substance_sha256": "31b7a983680913553fe2df79caf0e78d0ff10fda9ffbf8633a50544df2596b70"
+    "commit": "ecb4156cd4472f5ed9127e8f904a64a0ab9de737",
+    "committed_at": "2026-09-19T06:28:01Z",
+    "raw_sha256": "b2bb3e031fda16f1f3201a5640ae64a639a15e4997f9d1ca43ef13a2942600e6",
+    "bytes": 4391269,
+    "content_sha256": "0886eeaef6e36ef0a903d87948cf90329a7f24ec6d05d9d408f3761d8d537b00",
+    "substance_sha256": "4c1c08afca0dadf453fb68bb331ae02c33041cf83cd406a54e581991c578fd63"
   },
   "oscal": {
     "repo": "usnistgov/oscal-content",
