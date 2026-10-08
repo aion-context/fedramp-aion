@@ -12,12 +12,12 @@
   "marketplace": {
     "repo": "FedRAMP/marketplace-fedramp-gov-data",
     "path": "data.json",
-    "commit": "ca97dff3507ca08506b0d253dd8f6bd4e0dbeb27",
-    "committed_at": "2026-10-07T06:28:06Z",
-    "raw_sha256": "0e0fd2fc31a28d84d81629dff4f9c77eb30011d9016818acc86f589d7eaa4b89",
-    "bytes": 4400759,
-    "content_sha256": "c2299c1368b9d6d89e185cdc16f7108871089fb40c7741ab5c8a69f1f666affa",
-    "substance_sha256": "006b45a7be7694bdb95265fc8e6bb989d06f8512922483c6fc17935ae7f6ef1e"
+    "commit": "58a02cb1e008d88a28fb7619c1570b450eabb81b",
+    "committed_at": "2026-10-08T06:28:33Z",
+    "raw_sha256": "d248fd8e7a5f6b081081de3567645ac1a774dca0f326c67142fa12d4c0e08e4b",
+    "bytes": 4401181,
+    "content_sha256": "10aec553f188591f12e14f22faab526b75f92f9a062219bcf4ad6950f41ca87e",
+    "substance_sha256": "0336433533dbcff8935b4b8516256752c4e5c65979ce1e240677319fc40d453c"
   },
   "oscal": {
     "repo": "usnistgov/oscal-content",
@@ -32,12 +32,12 @@
   "rules": {
     "repo": "FedRAMP/rules",
     "path": "fedramp-consolidated-rules.json",
-    "commit": "1c33385a06acf4faf50da2b9b4dc31cd826e5b91",
-    "committed_at": "2026-10-05T17:22:05Z",
-    "raw_sha256": "d8a1cd5513fb0e1ecebf2ad8a74259c4b74900e8f7b4b429d6d6741bf9fe555f",
+    "commit": "2285dea99dd9344e11300bbe0a717ac12fb6acb3",
+    "committed_at": "2026-10-08T14:30:12Z",
+    "raw_sha256": "249d80fca1443a6dc00851e705aa01a4a0cba41b8ce29ccd85fac655b494a419",
     "bytes": 568543,
-    "content_sha256": "8111865ac0d3bd020adf446320a9bcd93b4b06867122e0448519825bc9c9f12d",
-    "substance_sha256": "71ca6d2ee0d545cf4f1dce83b0d2b3d9d6cd085b49d81f1ae15f8bc51345212a"
+    "content_sha256": "2de4c077ad4d4e46b66fc55d82d1c68bb185b1b96efe7f4e6d6ce336e8748849",
+    "substance_sha256": "fe7ab0d14a3711ced3f5e48ae99f3050e8eaadf0fc3cdc82a08dbb4b48d1c116"
   },
   "schemas": {
     "repo": "FedRAMP/schemas",
