@@ -2,22 +2,22 @@
   "kev": {
     "repo": "cisagov/kev-data",
     "path": "known_exploited_vulnerabilities.json",
-    "commit": "be330da604b41a3b29c84b3f0a0122d6d2167417",
-    "committed_at": "2026-10-08T23:39:30Z",
-    "raw_sha256": "fb1621beec7db19d99c1f919dede3d4cc01ad88acd16f79f1592929c4826dfee",
-    "bytes": 1777558,
-    "content_sha256": "1cc9aabdbcbb97bd18962de02d49312ae5b567167ed9604e68f963957e4ee6f6",
-    "substance_sha256": "c0b47e07b40075f85506332ace88231afdf5fff6733eafb140da4c5ebe09d247"
+    "commit": "7606917390b43dc02b251d88dbceed6296a919fc",
+    "committed_at": "2026-10-14T22:04:16Z",
+    "raw_sha256": "47b463a136b8e0956756cfbcdbc2e4b4ccb60c96b4ca7a1ca9f507817cc83045",
+    "bytes": 1787354,
+    "content_sha256": "bd076a03240ee7d0dea10fdba88e2f5c9044ee1539b5a64ab00c9f03c08c4245",
+    "substance_sha256": "a4221f7b5480f257d7d5cabb436e5d11db2757db451ea2dc7f6880df8e9a8e3b"
   },
   "marketplace": {
     "repo": "FedRAMP/marketplace-fedramp-gov-data",
     "path": "data.json",
-    "commit": "73b96cc88cccd13df595afbae1a5a8fc9bf54eed",
-    "committed_at": "2026-10-11T06:27:48Z",
-    "raw_sha256": "3fd99849abe7b04db7cc30a300fe6ecc8900945bb901a16422fd1da56b094043",
-    "bytes": 4401181,
-    "content_sha256": "5b4b2e6d89a161477b4ca6f6ec4076bbf3f3115945b431082a59677f7a1f1313",
-    "substance_sha256": "286bbb35a4c86923037d9bb53310c8879ff2957bb5ef989cd7f357020aa94aa9"
+    "commit": "0dc51057f22b48d5436926d51dab4587c0505918",
+    "committed_at": "2026-10-15T06:28:20Z",
+    "raw_sha256": "c60dbe86987b5e039427b23007864b59a78ba7273db2b0b7e8062b238ba95b11",
+    "bytes": 4382978,
+    "content_sha256": "5bce462e1a0f96e4c1231dba3f1c144bae339b1388aaeed748c1db9a2a7aeda6",
+    "substance_sha256": "f24e8166ba286ce0642aba34653ff2d8fb412c704ec6162f7dd9a13274559d67"
   },
   "oscal": {
     "repo": "usnistgov/oscal-content",
@@ -32,12 +32,12 @@
   "rules": {
     "repo": "FedRAMP/rules",
     "path": "fedramp-consolidated-rules.json",
-    "commit": "6eb376782a7ca9950d2f852b68fa05e8cdeb6e12",
-    "committed_at": "2026-10-08T17:52:29Z",
-    "raw_sha256": "db442f2d6efff2f0491cc58214c2e29b3ba06f67ee1571fcc3436bb419e02547",
-    "bytes": 567504,
-    "content_sha256": "f1e91968933dbd7081a9baf6a416f98f8d38270d3d8573770f3e55877d9f9448",
-    "substance_sha256": "c5dad488b04b17806cbd457a4cdc3d6b2fb934e1cb5c858342be3bc1e75fe178"
+    "commit": "a89d78477ddea98dc57eca24f5007794c2b4eeb6",
+    "committed_at": "2026-10-13T18:01:01Z",
+    "raw_sha256": "fb48d677a85d77fb72735a325de2c1945a1e0ceab1d2e655292fe9ebe3e4e0b4",
+    "bytes": 586076,
+    "content_sha256": "36c1b37b31c1e959bc68264a0a07d67edd76ca186452fc009e6ddf760c303af0",
+    "substance_sha256": "de2d4416e568e8fbaad75ccc6272cb2fa5f9b841f598c06f67435ef27a30906d"
   },
   "schemas": {
     "repo": "FedRAMP/schemas",
